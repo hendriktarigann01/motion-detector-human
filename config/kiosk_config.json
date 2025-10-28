@@ -1,0 +1,13 @@
+{
+    "camera_index": 0,
+    "distance_far": 150,
+    "distance_near": 300,
+    "distance_very_near": 500,
+    "stage2_countdown": 10,
+    "stage3_timeout": 15,
+    "stage4_idle_timeout": 15,
+    "stage4_countdown": 10,
+    "web_url": "https://mjsolution.co.id/our-product/",
+    "fullscreen": true,
+    "debug_mode": true
+}

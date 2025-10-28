@@ -4,10 +4,11 @@ Helps calibrate DISTANCE thresholds for your specific camera setup
 """
 
 import cv2
+import os
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import settings as config
 from models.yolo_detector import YOLOPersonDetector
 from helpers.camera_helper import initialize_camera

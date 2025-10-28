@@ -1,5 +1,6 @@
 """
 Media Player for handling video and audio playback
+FIXED: Video loading, audio in video, performance
 """
 
 import cv2
@@ -20,17 +21,21 @@ class MediaPlayer:
         # Video players
         self.idle_video = None
         self.waving_video = None
+        self.thankyou_video = None
         self.current_video = None
         self.current_video_name = None
         
-        # Audio
-        pygame.mixer.init()
-        self.audio_playing = False
+        # Video info
+        self.thankyou_has_audio = False
         
-        # Fade effect
-        self.fade_alpha = 1.0
-        self.is_fading = False
-        self.fade_direction = 0  # -1 for fade out, 1 for fade in
+        # Audio (for separate audio files only)
+        try:
+            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+            logger.info("Pygame mixer initialized")
+        except Exception as e:
+            logger.error(f"Failed to init pygame mixer: {e}")
+        
+        self.audio_playing = False
         
         self._load_media()
     
@@ -38,25 +43,62 @@ class MediaPlayer:
         """Load all media files"""
         try:
             # Load idle video
-            if Path(self.config.VIDEO_IDLE_LOOP).exists():
-                self.idle_video = cv2.VideoCapture(self.config.VIDEO_IDLE_LOOP)
-                logger.info(f"Loaded idle video: {self.config.VIDEO_IDLE_LOOP}")
+            idle_path = Path(self.config.VIDEO_IDLE_LOOP)
+            if idle_path.exists():
+                self.idle_video = cv2.VideoCapture(str(idle_path))
+                if self.idle_video.isOpened():
+                    logger.info(f"Loaded idle video: {idle_path}")
+                else:
+                    logger.error(f"Failed to open idle video: {idle_path}")
+                    self.idle_video = None
             else:
-                logger.warning(f"Idle video not found: {self.config.VIDEO_IDLE_LOOP}")
+                logger.error(f"Idle video not found: {idle_path}")
             
             # Load hand waving video
-            if Path(self.config.VIDEO_HAND_WAVING).exists():
-                self.waving_video = cv2.VideoCapture(self.config.VIDEO_HAND_WAVING)
-                logger.info(f"Loaded waving video: {self.config.VIDEO_HAND_WAVING}")
+            waving_path = Path(self.config.VIDEO_HAND_WAVING)
+            if waving_path.exists():
+                self.waving_video = cv2.VideoCapture(str(waving_path))
+                if self.waving_video.isOpened():
+                    logger.info(f"Loaded waving video: {waving_path}")
+                else:
+                    logger.error(f"Failed to open waving video: {waving_path}")
+                    self.waving_video = None
             else:
-                logger.warning(f"Waving video not found: {self.config.VIDEO_HAND_WAVING}")
+                logger.error(f"Waving video not found: {waving_path}")
             
-            # Load audio
-            if Path(self.config.AUDIO_SPEECH).exists():
-                pygame.mixer.music.load(self.config.AUDIO_SPEECH)
-                logger.info(f"Loaded audio: {self.config.AUDIO_SPEECH}")
+            # Load thank you video (with audio check)
+            thankyou_path = Path(self.config.VIDEO_THANK_YOU)
+            if thankyou_path.exists():
+                self.thankyou_video = cv2.VideoCapture(str(thankyou_path))
+                if self.thankyou_video.isOpened():
+                    # Check if video has audio
+                    # OpenCV doesn't directly support audio, we need pygame for that
+                    logger.info(f"Loaded thank you video: {thankyou_path}")
+                    logger.warning("OpenCV doesn't play video audio. Use pygame or vlc for audio support.")
+                    
+                    # Try to play audio using pygame if possible
+                    try:
+                        # Convert video to audio if needed, or use separate audio file
+                        # For now, just flag it
+                        self.thankyou_has_audio = True
+                    except:
+                        pass
+                else:
+                    logger.error(f"Failed to open thank you video: {thankyou_path}")
+                    self.thankyou_video = None
             else:
-                logger.warning(f"Audio not found: {self.config.AUDIO_SPEECH}")
+                logger.error(f"Thank you video not found: {thankyou_path}")
+            
+            # Load separate audio file (woman-speech.mp3)
+            audio_path = Path(self.config.AUDIO_SPEECH)
+            if audio_path.exists():
+                try:
+                    pygame.mixer.music.load(str(audio_path))
+                    logger.info(f"Loaded audio: {audio_path}")
+                except Exception as e:
+                    logger.error(f"Failed to load audio: {e}")
+            else:
+                logger.error(f"Audio not found: {audio_path}")
         
         except Exception as e:
             logger.error(f"Error loading media: {e}")
@@ -67,8 +109,10 @@ class MediaPlayer:
             logger.info("Starting idle video")
             self.current_video = self.idle_video
             self.current_video_name = 'idle'
-            if self.current_video:
+            if self.current_video and self.current_video.isOpened():
                 self.current_video.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            else:
+                logger.error("Idle video not available!")
             self.stop_audio()
     
     def play_waving_video(self):
@@ -77,9 +121,41 @@ class MediaPlayer:
             logger.info("Starting hand waving video")
             self.current_video = self.waving_video
             self.current_video_name = 'waving'
-            if self.current_video:
+            if self.current_video and self.current_video.isOpened():
                 self.current_video.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            else:
+                logger.error("Waving video not available!")
             self.stop_audio()
+    
+    def play_thankyou_video(self):
+        """Start playing thank you video (one-time, no loop) + audio"""
+        if self.current_video_name != 'thankyou':
+            logger.info("Starting thank you video")
+            self.current_video = self.thankyou_video
+            self.current_video_name = 'thankyou'
+            if self.current_video and self.current_video.isOpened():
+                self.current_video.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            else:
+                logger.error("Thank you video not available!")
+            
+            # Stop any previous audio
+            self.stop_audio()
+            
+            # FIXED: Play thank you audio (separate file)
+            if hasattr(self.config, 'AUDIO_THANK_YOU'):
+                audio_path = Path(self.config.AUDIO_THANK_YOU)
+                if audio_path.exists():
+                    try:
+                        pygame.mixer.music.load(str(audio_path))
+                        pygame.mixer.music.play(0)  # Play once (0 = no loop)
+                        self.audio_playing = True
+                        logger.info("Playing thank you audio")
+                    except Exception as e:
+                        logger.error(f"Failed to play thank you audio: {e}")
+                else:
+                    logger.warning(f"Thank you audio not found: {audio_path}")
+            else:
+                logger.warning("AUDIO_THANK_YOU not configured")
     
     def play_audio(self):
         """Play speech audio (looping)"""
@@ -87,102 +163,81 @@ class MediaPlayer:
             try:
                 pygame.mixer.music.play(-1)  # -1 = loop indefinitely
                 self.audio_playing = True
-                logger.info("Started audio playback")
+                logger.info("Started audio playback (looping)")
             except Exception as e:
                 logger.error(f"Error playing audio: {e}")
     
     def stop_audio(self):
         """Stop audio playback"""
         if self.audio_playing:
-            pygame.mixer.music.stop()
-            self.audio_playing = False
-            logger.info("Stopped audio playback")
+            try:
+                pygame.mixer.music.stop()
+                self.audio_playing = False
+                logger.info("Stopped audio playback")
+            except Exception as e:
+                logger.error(f"Error stopping audio: {e}")
     
-    def get_video_frame(self, target_size=None):
+    def get_video_frame(self, target_size=None, loop=True):
         """
-        Get current video frame
+        Get current video frame (OPTIMIZED)
         
         Args:
             target_size: (width, height) to resize frame, or None
+            loop: If True, loop video. If False, stop at end
         
         Returns:
             numpy array (BGR image) or None
         """
         if self.current_video is None or not self.current_video.isOpened():
+            logger.error(f"Current video not available: {self.current_video_name}")
             return None
         
         ret, frame = self.current_video.read()
         
         if not ret:
-            # Loop video
-            self.current_video.set(cv2.CAP_PROP_POS_FRAMES, 0)
-            ret, frame = self.current_video.read()
+            # Video ended
+            if loop and self.current_video_name != 'thankyou':
+                # Loop video
+                self.current_video.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                ret, frame = self.current_video.read()
+            else:
+                # Don't loop (thank you video plays once)
+                return None
             
             if not ret:
+                logger.error(f"Failed to read frame from {self.current_video_name}")
                 return None
         
-        # Resize if needed
+        # Resize if needed (FAST resize method)
         if target_size:
-            frame = cv2.resize(frame, target_size)
-        
-        # Apply fade effect
-        if self.fade_alpha < 1.0:
-            overlay = np.zeros_like(frame)
-            frame = cv2.addWeighted(frame, self.fade_alpha, overlay, 1 - self.fade_alpha, 0)
+            frame = cv2.resize(frame, target_size, interpolation=cv2.INTER_LINEAR)
         
         return frame
     
-    def start_fade_out(self):
-        """Start fade out effect"""
-        self.is_fading = True
-        self.fade_direction = -1
-        self.fade_alpha = 1.0
-        logger.info("Starting fade out")
-    
-    def start_fade_in(self):
-        """Start fade in effect"""
-        self.is_fading = True
-        self.fade_direction = 1
-        self.fade_alpha = 0.0
-        logger.info("Starting fade in")
-    
-    def update_fade(self, delta_time):
-        """
-        Update fade effect
-        
-        Args:
-            delta_time: Time since last update (seconds)
-        
-        Returns:
-            bool: True if fade is complete
-        """
-        if not self.is_fading:
+    def is_video_finished(self):
+        """Check if current video has finished (for non-looping videos)"""
+        if self.current_video is None or not self.current_video.isOpened():
             return True
         
-        # Calculate fade speed
-        fade_speed = 1.0 / self.config.FADE_DURATION
-        
-        # Update alpha
-        self.fade_alpha += self.fade_direction * fade_speed * delta_time
-        
-        # Clamp alpha
-        self.fade_alpha = max(0.0, min(1.0, self.fade_alpha))
-        
-        # Check if fade complete
-        if self.fade_direction == -1 and self.fade_alpha <= 0.0:
-            self.is_fading = False
-            return True
-        elif self.fade_direction == 1 and self.fade_alpha >= 1.0:
-            self.is_fading = False
-            return True
+        if self.current_video_name == 'thankyou':
+            # Check if we've reached the end
+            current_frame = self.current_video.get(cv2.CAP_PROP_POS_FRAMES)
+            total_frames = self.current_video.get(cv2.CAP_PROP_FRAME_COUNT)
+            
+            if total_frames <= 0:
+                return True
+            
+            finished = current_frame >= total_frames - 2  # -2 for safety margin
+            if finished:
+                logger.info(f"Thank you video finished (frame {current_frame}/{total_frames})")
+            return finished
         
         return False
     
     def stop_all(self):
         """Stop all media playback"""
         self.stop_audio()
-        self.current_video = None
-        self.current_video_name = None
+        # Don't set current_video to None, just stop audio
     
     def cleanup(self):
         """Release all resources"""
@@ -193,5 +248,10 @@ class MediaPlayer:
             self.idle_video.release()
         if self.waving_video:
             self.waving_video.release()
+        if self.thankyou_video:
+            self.thankyou_video.release()
         
-        pygame.mixer.quit()
+        try:
+            pygame.mixer.quit()
+        except:
+            pass

@@ -2,12 +2,12 @@
 Component Test Script
 Tests all components before running main application
 """
-
+import os
 import sys
 from pathlib import Path
 import cv2
 
-sys.path.append(str(Path(__file__).parent))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import settings as config
 
 print("="*70)
@@ -287,10 +287,7 @@ if warnings:
 
 if tests_failed == 0:
     print("🎉 ALL TESTS PASSED!")
-    print()
-    print("✅ System ready to run. Next steps:")
-    print("   1. Run calibration: python calibration_tool.py")
-    print("   2. Run application: python main_refactored.py")
+    print("✅ System ready to run")
     print()
 else:
     print("❌ SOME TESTS FAILED!")

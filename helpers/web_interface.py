@@ -1,6 +1,6 @@
 """
 Web Interface Handler
-Opens browser in fullscreen/kiosk mode and monitors interaction
+Opens browser and monitors interaction + completion signal
 """
 
 import webbrowser
@@ -8,6 +8,9 @@ import logging
 from datetime import datetime
 import threading
 import time
+from pathlib import Path
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+import json
 
 try:
     import pyautogui
@@ -17,6 +20,42 @@ except ImportError:
     logging.warning("PyAutoGUI not available. Mouse tracking will be disabled.")
 
 logger = logging.getLogger(__name__)
+
+
+class CompletionSignalHandler(SimpleHTTPRequestHandler):
+    """HTTP handler to receive completion signals from web interface"""
+    
+    completion_callback = None
+    
+    def do_POST(self):
+        """Handle POST requests from web interface"""
+        if self.path == '/complete':
+            # Signal received from web
+            logger.info("Received completion signal from web interface")
+            if CompletionSignalHandler.completion_callback:
+                CompletionSignalHandler.completion_callback()
+            
+            # Send response
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "ok"}).encode())
+        else:
+            self.send_response(404)
+            self.end_headers()
+    
+    def do_OPTIONS(self):
+        """Handle CORS preflight"""
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+    
+    def log_message(self, format, *args):
+        """Suppress default logging"""
+        pass
 
 
 class WebInterfaceHandler:
@@ -29,29 +68,58 @@ class WebInterfaceHandler:
         self.last_interaction_time = None
         self.monitoring_thread = None
         self.should_monitor = False
+        
+        # Completion signal handling
+        self.completion_received = False
+        self.signal_server = None
+        self.signal_thread = None
+        
+        # Start signal server
+        self._start_signal_server()
+    
+    def _start_signal_server(self):
+        """Start HTTP server to receive completion signals"""
+        try:
+            CompletionSignalHandler.completion_callback = self._on_completion_signal
+            self.signal_server = HTTPServer(('localhost', 8765), CompletionSignalHandler)
+            self.signal_thread = threading.Thread(target=self.signal_server.serve_forever, daemon=True)
+            self.signal_thread.start()
+            logger.info("Completion signal server started on http://localhost:8765")
+        except Exception as e:
+            logger.error(f"Failed to start signal server: {e}")
+    
+    def _on_completion_signal(self):
+        """Called when completion signal received from web"""
+        self.completion_received = True
+        logger.info("Completion signal set")
     
     def open_browser(self):
         """Open web browser in fullscreen/kiosk mode"""
         try:
             logger.info(f"Opening browser: {self.config.WEB_URL}")
             
+            # Reset completion flag
+            self.completion_received = False
+            
             # Open URL in default browser
-            # For production, you might want to use specific browser flags:
-            # - Chrome: --kiosk --fullscreen
-            # - Firefox: -kiosk
-            webbrowser.open(self.config.WEB_URL, new=2)  # new=2 opens in new tab
+            webbrowser.open(self.config.WEB_URL, new=2)
             
             self.is_active = True
             self.last_interaction_time = datetime.now()
-            self.last_mouse_pos = pyautogui.position()
+            
+            if PYAUTOGUI_AVAILABLE:
+                self.last_mouse_pos = pyautogui.position()
             
             # Start monitoring interaction in background
             self._start_monitoring()
             
-            # Optional: Auto-fullscreen after a delay
-            time.sleep(2)  # Wait for browser to open
-            if self.config.FULLSCREEN_MODE:
-                pyautogui.press('f11')  # F11 for fullscreen in most browsers
+            # Auto-fullscreen after delay
+            time.sleep(2)
+            if self.config.FULLSCREEN_MODE and PYAUTOGUI_AVAILABLE:
+                try:
+                    pyautogui.press('f11')
+                except:
+                    pass
             
             logger.info("Browser opened successfully")
         
@@ -73,14 +141,15 @@ class WebInterfaceHandler:
         """Monitor mouse movement and clicks (runs in background thread)"""
         while self.should_monitor and self.is_active:
             try:
-                current_pos = pyautogui.position()
+                if PYAUTOGUI_AVAILABLE:
+                    current_pos = pyautogui.position()
+                    
+                    # Check if mouse moved
+                    if self.last_mouse_pos != current_pos:
+                        self.last_interaction_time = datetime.now()
+                        self.last_mouse_pos = current_pos
                 
-                # Check if mouse moved
-                if self.last_mouse_pos != current_pos:
-                    self.last_interaction_time = datetime.now()
-                    self.last_mouse_pos = current_pos
-                
-                time.sleep(0.1)  # Check every 100ms
+                time.sleep(0.1)
             
             except Exception as e:
                 logger.error(f"Error in interaction monitoring: {e}")
@@ -97,53 +166,44 @@ class WebInterfaceHandler:
             return False
         
         idle_time = (datetime.now() - self.last_interaction_time).total_seconds()
-        return idle_time < 1.0  # Consider interaction if within last second
+        return idle_time < 1.0
+    
+    def check_completion(self):
+        """
+        Check if web interface signaled completion
+        
+        Returns:
+            bool: True if completion signal received
+        """
+        return self.completion_received
     
     def close_browser(self):
         """Close browser and stop monitoring"""
         logger.info("Closing browser")
         self.is_active = False
         self.should_monitor = False
+        self.completion_received = False
         
         # Stop monitoring thread
         if self.monitoring_thread:
             self.monitoring_thread.join(timeout=1)
         
-        # Close browser window (platform dependent)
-        try:
-            # Alt+F4 works on Windows/Linux
-            pyautogui.hotkey('alt', 'f4')
-        except Exception as e:
-            logger.warning(f"Could not close browser automatically: {e}")
+        # Close browser window
+        if PYAUTOGUI_AVAILABLE:
+            try:
+                pyautogui.hotkey('alt', 'f4')
+            except Exception as e:
+                logger.warning(f"Could not close browser: {e}")
     
     def reset(self):
         """Reset handler state"""
         self.close_browser()
         self.last_mouse_pos = None
         self.last_interaction_time = None
-
-
-# Alternative: Embedded browser using PyQt5 or Tkinter
-# Uncomment below if you want embedded browser instead of system browser
-
-"""
-from PyQt5.QtWidgets import QApplication, QMainWindow
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtCore import QUrl, QTimer
-
-class EmbeddedBrowser(QMainWindow):
-    def __init__(self, url, fullscreen=True):
-        super().__init__()
-        self.browser = QWebEngineView()
-        self.browser.setUrl(QUrl(url))
-        self.setCentralWidget(self.browser)
-        
-        if fullscreen:
-            self.showFullScreen()
-        else:
-            self.show()
+        self.completion_received = False
     
-    def get_interaction_time(self):
-        # Track mouse movement, clicks, etc.
-        pass
-"""
+    def cleanup(self):
+        """Cleanup resources"""
+        self.close_browser()
+        if self.signal_server:
+            self.signal_server.shutdown()
