@@ -1,209 +1,259 @@
 """
-Web Interface Handler
-Opens browser and monitors interaction + completion signal
+Web Interface Handler for Kiosk
+UPDATED: Auto fullscreen (F11) when browser opens
+Handles browser automation, interaction tracking, and completion signals
 """
 
-import webbrowser
 import logging
+import time
 from datetime import datetime
 import threading
-import time
 from pathlib import Path
-from http.server import HTTPServer, SimpleHTTPRequestHandler
-import json
-
-try:
-    import pyautogui
-    PYAUTOGUI_AVAILABLE = True
-except ImportError:
-    PYAUTOGUI_AVAILABLE = False
-    logging.warning("PyAutoGUI not available. Mouse tracking will be disabled.")
 
 logger = logging.getLogger(__name__)
 
-
-class CompletionSignalHandler(SimpleHTTPRequestHandler):
-    """HTTP handler to receive completion signals from web interface"""
-    
-    completion_callback = None
-    
-    def do_POST(self):
-        """Handle POST requests from web interface"""
-        if self.path == '/complete':
-            # Signal received from web
-            logger.info("Received completion signal from web interface")
-            if CompletionSignalHandler.completion_callback:
-                CompletionSignalHandler.completion_callback()
-            
-            # Send response
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps({"status": "ok"}).encode())
-        else:
-            self.send_response(404)
-            self.end_headers()
-    
-    def do_OPTIONS(self):
-        """Handle CORS preflight"""
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
-    
-    def log_message(self, format, *args):
-        """Suppress default logging"""
-        pass
+try:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.common.keys import Keys
+    from selenium.common.exceptions import TimeoutException, WebDriverException
+    SELENIUM_AVAILABLE = True
+except ImportError:
+    SELENIUM_AVAILABLE = False
+    logger.warning("Selenium not installed. Web interface features will be disabled.")
+    logger.warning("Install with: pip install selenium")
 
 
 class WebInterfaceHandler:
-    """Manages web browser for catalog display"""
+    """Handles web browser automation for kiosk interface"""
     
     def __init__(self, config):
         self.config = config
-        self.is_active = False
-        self.last_mouse_pos = None
-        self.last_interaction_time = None
-        self.monitoring_thread = None
-        self.should_monitor = False
+        self.driver = None
+        self.is_browser_open = False
+        self.last_interaction_time = datetime.now()
+        self.completion_signaled = False
         
-        # Completion signal handling
-        self.completion_received = False
-        self.signal_server = None
-        self.signal_thread = None
-        
-        # Start signal server
-        self._start_signal_server()
-    
-    def _start_signal_server(self):
-        """Start HTTP server to receive completion signals"""
-        try:
-            CompletionSignalHandler.completion_callback = self._on_completion_signal
-            self.signal_server = HTTPServer(('localhost', 8765), CompletionSignalHandler)
-            self.signal_thread = threading.Thread(target=self.signal_server.serve_forever, daemon=True)
-            self.signal_thread.start()
-            logger.info("Completion signal server started on http://localhost:8765")
-        except Exception as e:
-            logger.error(f"Failed to start signal server: {e}")
-    
-    def _on_completion_signal(self):
-        """Called when completion signal received from web"""
-        self.completion_received = True
-        logger.info("Completion signal set")
-    
-    def open_browser(self):
-        """Open web browser in fullscreen/kiosk mode"""
-        try:
-            logger.info(f"Opening browser: {self.config.WEB_URL}")
-            
-            # Reset completion flag
-            self.completion_received = False
-            
-            # Open URL in default browser
-            webbrowser.open(self.config.WEB_URL, new=2)
-            
-            self.is_active = True
-            self.last_interaction_time = datetime.now()
-            
-            if PYAUTOGUI_AVAILABLE:
-                self.last_mouse_pos = pyautogui.position()
-            
-            # Start monitoring interaction in background
-            self._start_monitoring()
-            
-            # Auto-fullscreen after delay
-            time.sleep(2)
-            if self.config.FULLSCREEN_MODE and PYAUTOGUI_AVAILABLE:
-                try:
-                    pyautogui.press('f11')
-                except:
-                    pass
-            
-            logger.info("Browser opened successfully")
-        
-        except Exception as e:
-            logger.error(f"Error opening browser: {e}")
-            self.is_active = False
-    
-    def _start_monitoring(self):
-        """Start background thread to monitor mouse/touch interaction"""
-        if self.monitoring_thread and self.monitoring_thread.is_alive():
+        if not SELENIUM_AVAILABLE:
+            logger.error("Selenium not available - web interface disabled")
             return
         
-        self.should_monitor = True
-        self.monitoring_thread = threading.Thread(target=self._monitor_interaction, daemon=True)
-        self.monitoring_thread.start()
-        logger.info("Started interaction monitoring")
+        # Setup Chrome options
+        self.chrome_options = Options()
+        self.chrome_options.add_argument('--start-maximized')
+        self.chrome_options.add_argument('--disable-infobars')
+        self.chrome_options.add_argument('--disable-notifications')
+        self.chrome_options.add_argument('--disable-popup-blocking')
+        # Disable automation flags
+        self.chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        self.chrome_options.add_experimental_option('useAutomationExtension', False)
+        
+        logger.info("Web Interface Handler initialized")
     
-    def _monitor_interaction(self):
-        """Monitor mouse movement and clicks (runs in background thread)"""
-        while self.should_monitor and self.is_active:
-            try:
-                if PYAUTOGUI_AVAILABLE:
-                    current_pos = pyautogui.position()
-                    
-                    # Check if mouse moved
-                    if self.last_mouse_pos != current_pos:
-                        self.last_interaction_time = datetime.now()
-                        self.last_mouse_pos = current_pos
-                
-                time.sleep(0.1)
+    def open_browser(self):
+        """Open browser and navigate to web interface with auto fullscreen"""
+        if not SELENIUM_AVAILABLE:
+            logger.error("Cannot open browser - Selenium not available")
+            return False
+        
+        try:
+            if self.is_browser_open and self.driver:
+                logger.warning("Browser already open")
+                return True
             
+            if self.config.DEVELOPMENT_MODE:
+                logger.info("Opening web browser...")
+            
+            # Initialize Chrome driver
+            self.driver = webdriver.Chrome(options=self.chrome_options)
+            
+            # Navigate to URL
+            self.driver.get(self.config.WEB_URL)
+            if self.config.DEVELOPMENT_MODE:
+                logger.info(f"Navigated to: {self.config.WEB_URL}")
+            
+            # Wait for page to load
+            time.sleep(1)
+            
+            # AUTO FULLSCREEN: Press F11
+            try:
+                body = self.driver.find_element(By.TAG_NAME, 'body')
+                body.send_keys(Keys.F11)
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info("Auto fullscreen (F11) activated")
             except Exception as e:
-                logger.error(f"Error in interaction monitoring: {e}")
-                break
+                logger.warning(f"Failed to auto fullscreen: {e}")
+            
+            self.is_browser_open = True
+            self.last_interaction_time = datetime.now()
+            self.completion_signaled = False
+            
+            # Start monitoring thread
+            self._start_monitoring()
+            
+            if self.config.DEVELOPMENT_MODE:
+                logger.info("Web browser opened successfully (fullscreen)")
+            return True
+        
+        except Exception as e:
+            logger.error(f"Failed to open browser: {e}")
+            self.driver = None
+            self.is_browser_open = False
+            return False
+    
+    def close_browser(self):
+        """Close browser window"""
+        if not self.is_browser_open or not self.driver:
+            return
+        
+        try:
+            if self.config.DEVELOPMENT_MODE:
+                logger.info("Closing web browser...")
+            self.driver.quit()
+            self.driver = None
+            self.is_browser_open = False
+            if self.config.DEVELOPMENT_MODE:
+                logger.info("Browser closed successfully")
+        
+        except Exception as e:
+            logger.error(f"Error closing browser: {e}")
+            self.driver = None
+            self.is_browser_open = False
     
     def check_interaction(self):
         """
-        Check if user has interacted recently
-        
-        Returns:
-            bool: True if interaction detected recently
+        Check if user is interacting with web interface
+        Returns True if interaction detected recently
         """
-        if not self.is_active or self.last_interaction_time is None:
+        if not self.is_browser_open or not self.driver:
             return False
         
-        idle_time = (datetime.now() - self.last_interaction_time).total_seconds()
-        return idle_time < 1.0
+        try:
+            # Check if window is still active
+            current_url = self.driver.current_url
+            
+            # Check for mouse movement or clicks (via JavaScript)
+            last_activity = self.driver.execute_script("""
+                return window.lastActivityTime || 0;
+            """)
+            
+            # If we got activity timestamp, check if it's recent
+            if last_activity and isinstance(last_activity, (int, float)):
+                current_time = time.time() * 1000  # Convert to ms
+                time_since_activity = (current_time - last_activity) / 1000  # Convert to seconds
+                
+                if time_since_activity < self.config.MOUSE_IDLE_THRESHOLD:
+                    self.last_interaction_time = datetime.now()
+                    return True
+            
+            # Check if we have recent interaction
+            time_since_last = (datetime.now() - self.last_interaction_time).total_seconds()
+            return time_since_last < self.config.MOUSE_IDLE_THRESHOLD
+        
+        except Exception as e:
+            if self.config.DEVELOPMENT_MODE:
+                logger.error(f"Error checking interaction: {e}")
+            return False
     
     def check_completion(self):
         """
-        Check if web interface signaled completion
-        
-        Returns:
-            bool: True if completion signal received
+        Check if web interface has signaled completion
+        Returns True if 'Selesai 5' button was clicked
         """
-        return self.completion_received
-    
-    def close_browser(self):
-        """Close browser and stop monitoring"""
-        logger.info("Closing browser")
-        self.is_active = False
-        self.should_monitor = False
-        self.completion_received = False
+        if not self.is_browser_open or not self.driver:
+            return False
         
-        # Stop monitoring thread
-        if self.monitoring_thread:
-            self.monitoring_thread.join(timeout=1)
+        if self.completion_signaled:
+            return True
         
-        # Close browser window
-        if PYAUTOGUI_AVAILABLE:
-            try:
-                pyautogui.hotkey('alt', 'f4')
-            except Exception as e:
-                logger.warning(f"Could not close browser: {e}")
+        try:
+            # Check for completion flag (set by web app)
+            completion_flag = self.driver.execute_script("""
+                return window.kioskCompleted || false;
+            """)
+            
+            if completion_flag:
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info("Web completion signal detected!")
+                self.completion_signaled = True
+                return True
+            
+            return False
+        
+        except Exception as e:
+            if self.config.DEVELOPMENT_MODE:
+                logger.error(f"Error checking completion: {e}")
+            return False
     
-    def reset(self):
-        """Reset handler state"""
-        self.close_browser()
-        self.last_mouse_pos = None
-        self.last_interaction_time = None
-        self.completion_received = False
+    def _start_monitoring(self):
+        """Start background monitoring thread"""
+        # Inject activity tracking script
+        try:
+            self.driver.execute_script("""
+                window.lastActivityTime = Date.now();
+                
+                // Track mouse movement
+                document.addEventListener('mousemove', function() {
+                    window.lastActivityTime = Date.now();
+                });
+                
+                // Track clicks
+                document.addEventListener('click', function() {
+                    window.lastActivityTime = Date.now();
+                });
+                
+                // Track touch events
+                document.addEventListener('touchstart', function() {
+                    window.lastActivityTime = Date.now();
+                });
+                
+                // Track scrolling
+                document.addEventListener('scroll', function() {
+                    window.lastActivityTime = Date.now();
+                });
+            """)
+            
+            if self.config.DEVELOPMENT_MODE:
+                logger.info("Activity tracking script injected")
+        
+        except Exception as e:
+            logger.error(f"Failed to inject tracking script: {e}")
     
     def cleanup(self):
         """Cleanup resources"""
         self.close_browser()
-        if self.signal_server:
-            self.signal_server.shutdown()
+
+
+# Fallback class when Selenium is not available
+class WebInterfaceHandlerFallback:
+    """Fallback handler when Selenium is not installed"""
+    
+    def __init__(self, config):
+        self.config = config
+        self.is_browser_open = False
+        logger.warning("Using fallback web interface handler (Selenium not available)")
+    
+    def open_browser(self):
+        logger.warning("Cannot open browser - Selenium not installed")
+        return False
+    
+    def close_browser(self):
+        pass
+    
+    def check_interaction(self):
+        return False
+    
+    def check_completion(self):
+        return False
+    
+    def cleanup(self):
+        pass
+
+
+# Use fallback if Selenium is not available
+if not SELENIUM_AVAILABLE:
+    WebInterfaceHandler = WebInterfaceHandlerFallback

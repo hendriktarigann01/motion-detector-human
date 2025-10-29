@@ -1,7 +1,7 @@
 """
 State Machine for Kiosk System
-Handles 5 stages: IDLE, PERSON_DETECTED, AUDIO_PROMPT, WEB_INTERFACE, THANK_YOU
-FIXED: Stage 3 requires 3 continuous seconds at very_near before opening web
+UPDATED: 4 stages - Stage 3 ONLY button trigger (NO AUTO-TRIGGER)
+Removed THANK_YOU stage, button click can skip to Stage 4
 """
 
 from enum import Enum
@@ -17,7 +17,6 @@ class KioskState(Enum):
     STAGE_2_DETECTED = "person_detected"
     STAGE_3_AUDIO = "audio_prompt"
     STAGE_4_WEB = "web_interface"
-    STAGE_5_THANKYOU = "thank_you_video"
 
 
 class StateMachine:
@@ -33,7 +32,7 @@ class StateMachine:
         self.last_interaction_time = datetime.now()
         self.countdown_start_time = None
         
-        # FIXED: Add separate timer for very_near stability check
+        # Separate timer for very_near stability check (NOT USED for auto-trigger anymore)
         self.very_near_start_time = None
         self.was_very_near = False
         
@@ -41,10 +40,11 @@ class StateMachine:
         self.is_counting_down = False
         self.person_detected = False
         self.web_completion_requested = False
+        self.button_clicked = False  # Track button click
         
         logger.info("State Machine initialized at STAGE_1_IDLE")
     
-    def update(self, person_detected, distance_status, interaction_detected=False, web_completed=False):
+    def update(self, person_detected, distance_status, interaction_detected=False, web_completed=False, button_clicked=False):
         """
         Update state machine based on inputs
         
@@ -53,6 +53,7 @@ class StateMachine:
             distance_status (str): 'far', 'near', 'very_near'
             interaction_detected (bool): User interaction in Stage 4
             web_completed (bool): Web signals button "Selesai 5" clicked
+            button_clicked (bool): "More Information" button clicked in Stage 3
         
         Returns:
             tuple: (state_changed, new_state)
@@ -63,6 +64,10 @@ class StateMachine:
         # Track web completion signal
         if web_completed:
             self.web_completion_requested = True
+        
+        # Track button click
+        if button_clicked:
+            self.button_clicked = True
         
         # Update interaction time
         if interaction_detected:
@@ -81,22 +86,21 @@ class StateMachine:
             self._handle_stage_3(person_detected, distance_status)
         
         elif self.current_state == KioskState.STAGE_4_WEB:
-            self._handle_stage_4(person_detected, interaction_detected)
-        
-        elif self.current_state == KioskState.STAGE_5_THANKYOU:
-            self._handle_stage_5()
+            self._handle_stage_4(person_detected, distance_status, interaction_detected)
         
         # Check if state changed
         state_changed = (old_state != self.current_state)
         
         if state_changed:
-            logger.info(f"State transition: {old_state.value} -> {self.current_state.value}")
+            if self.config.DEVELOPMENT_MODE:
+                logger.info(f"State transition: {old_state.value} -> {self.current_state.value}")
             self.previous_state = old_state
             self.state_entry_time = datetime.now()
             
-            # FIXED: Reset timers on state change
+            # Reset timers on state change
             self.very_near_start_time = None
             self.was_very_near = False
+            self.button_clicked = False
             
             # Reset web completion flag on state change
             if old_state == KioskState.STAGE_4_WEB:
@@ -105,28 +109,31 @@ class StateMachine:
         return state_changed, self.current_state
     
     def _handle_stage_1(self, person_detected, distance_status):
-        """Stage 1: Idle monitoring with looping video"""
+        """Stage 1: Idle monitoring with looping welcome animation"""
         if person_detected:
             self._transition_to(KioskState.STAGE_2_DETECTED)
     
     def _handle_stage_2(self, person_detected, distance_status):
-        """Stage 2: Person detected, show hand-waving video (looping)"""
+        """Stage 2: Person detected, show hand-waving video+audio (looping)"""
         if not person_detected:
             # Person left, start countdown
             if not self.is_counting_down:
                 self.is_counting_down = True
                 self.countdown_start_time = datetime.now()
-                logger.info(f"Stage 2: Starting {self.config.STAGE2_COUNTDOWN}s countdown")
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info(f"Stage 2: Starting {self.config.STAGE2_COUNTDOWN}s countdown")
             
             # Check if countdown expired
             elapsed = (datetime.now() - self.countdown_start_time).total_seconds()
             if elapsed >= self.config.STAGE2_COUNTDOWN:
-                logger.info("Stage 2: Countdown expired, back to Stage 1")
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info("Stage 2: Countdown expired, back to Stage 1")
                 self._transition_to(KioskState.STAGE_1_IDLE)
         
         elif distance_status == 'very_near':
-            # Person very close (≤0.6m), move to stage 3 (audio)
-            logger.info("Stage 2: Person very close, moving to Stage 3 (Audio)")
+            # Person very close (<=0.6m), move to stage 3 (audio + button)
+            if self.config.DEVELOPMENT_MODE:
+                logger.info("Stage 2: Person very close, moving to Stage 3 (Audio + Button)")
             self._transition_to(KioskState.STAGE_3_AUDIO)
         
         else:
@@ -137,86 +144,99 @@ class StateMachine:
     
     def _handle_stage_3(self, person_detected, distance_status):
         """
-        Stage 3: Audio prompt (woman-speech.mp3) loops continuously
-        FIXED: User MUST stay at very_near distance for 3 CONTINUOUS seconds to trigger Stage 4
+        Stage 3: Hand-waving video + audio loops continuously + "More Information" button
+        User MUST click button to go to Stage 4 (NO AUTO-TRIGGER)
         """
+        
+        # Priority 1: Check if button was clicked
+        if self.button_clicked:
+            if self.config.DEVELOPMENT_MODE:
+                logger.info("Stage 3: 'More Information' button clicked, opening web")
+            self._transition_to(KioskState.STAGE_4_WEB)
+            return
+        
         if not person_detected:
             # Person left completely, back to stage 1
-            logger.info("Stage 3: Person left, back to Stage 1")
+            if self.config.DEVELOPMENT_MODE:
+                logger.info("Stage 3: Person left, back to Stage 1")
             self._transition_to(KioskState.STAGE_1_IDLE)
             return
         
-        # FIXED: Track CONTINUOUS very_near time
+        # Track very_near status for debugging (but DON'T auto-trigger)
         if distance_status == 'very_near':
             # Start timer if JUST entered very_near
             if not self.was_very_near:
                 self.very_near_start_time = datetime.now()
                 self.was_very_near = True
-                logger.info("Stage 3: Person entered VERY_NEAR zone, starting 3s stability timer")
-            
-            # Check how long we've been CONTINUOUSLY at very_near
-            if self.very_near_start_time is not None:
-                time_at_very_near = (datetime.now() - self.very_near_start_time).total_seconds()
-                
-                # Log progress (every 0.5s to avoid spam)
-                if int(time_at_very_near * 2) != int((time_at_very_near - 0.1) * 2):
-                    logger.info(f"Stage 3: Stable at VERY_NEAR for {time_at_very_near:.1f}s / 3.0s")
-                
-                # MUST be stable for 3 continuous seconds
-                if time_at_very_near >= 3.0:
-                    logger.info(f"✅ Stage 3: Person STABLE at VERY_NEAR for {time_at_very_near:.1f}s, opening web")
-                    self._transition_to(KioskState.STAGE_4_WEB)
-        
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info("Stage 3: Person at VERY_NEAR zone (waiting for button click)")
         else:
-            # NOT at very_near anymore - RESET timer immediately
+            # NOT at very_near anymore
             if self.was_very_near:
-                logger.info(f"⚠️ Stage 3: Person moved away from VERY_NEAR (now: {distance_status}), RESETTING timer")
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info(f"Stage 3: Person moved away from VERY_NEAR (now: {distance_status})")
                 self.very_near_start_time = None
                 self.was_very_near = False
             
             # Check timeout (if person too far for too long)
             time_in_stage = (datetime.now() - self.state_entry_time).total_seconds()
             if distance_status == 'far' and time_in_stage >= self.config.STAGE3_RESPONSE_TIMEOUT:
-                logger.info("Stage 3: Response timeout (user too far), back to Stage 2")
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info("Stage 3: Response timeout (user too far), back to Stage 2")
                 self._transition_to(KioskState.STAGE_2_DETECTED)
     
-    def _handle_stage_4(self, person_detected, interaction_detected):
-        """Stage 4: Web interface active, wait for completion signal or timeout"""
+    def _handle_stage_4(self, person_detected, distance_status, interaction_detected):
+        """
+        Stage 4: Web interface active
+        Countdown starts if: (Idle timeout) OR (Person moves to NEAR/FAR distance)
+        """
         
         # Priority 1: Check if web completion was signaled (button "Selesai 5" clicked)
         if self.web_completion_requested:
-            logger.info("Stage 4: Web completion signal received, moving to Thank You")
-            self._transition_to(KioskState.STAGE_5_THANKYOU)
+            if self.config.DEVELOPMENT_MODE:
+                logger.info("Stage 4: Web completion signal received, back to Stage 1")
+            self._transition_to(KioskState.STAGE_1_IDLE)
             return
         
-        # Priority 2: Check idle time
-        idle_time = (datetime.now() - self.last_interaction_time).total_seconds()
+        # Priority 2: Check if person moved away to NEAR or FAR
+        should_countdown = False
+        countdown_reason = ""
         
+        if distance_status in ['near', 'far']:
+            should_countdown = True
+            countdown_reason = f"person moved to {distance_status.upper()} distance"
+        
+        # Priority 3: Check idle time
+        idle_time = (datetime.now() - self.last_interaction_time).total_seconds()
         if idle_time >= self.config.STAGE4_IDLE_TIMEOUT:
-            # Start final countdown
+            should_countdown = True
+            if countdown_reason:
+                countdown_reason += " AND idle timeout"
+            else:
+                countdown_reason = "idle timeout"
+        
+        if should_countdown:
+            # Start countdown
             if not self.is_counting_down:
                 self.is_counting_down = True
                 self.countdown_start_time = datetime.now()
-                logger.info(f"Stage 4: Starting final {self.config.STAGE4_COUNTDOWN_DURATION}s countdown")
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info(f"Stage 4: Starting {self.config.STAGE4_COUNTDOWN_DURATION}s countdown ({countdown_reason})")
             
             # Check if countdown expired
             countdown_elapsed = (datetime.now() - self.countdown_start_time).total_seconds()
             if countdown_elapsed >= self.config.STAGE4_COUNTDOWN_DURATION:
-                logger.info("Stage 4: Countdown expired, moving to Thank You")
-                self._transition_to(KioskState.STAGE_5_THANKYOU)
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info(f"Stage 4: Countdown expired ({countdown_reason}), back to Stage 1")
+                self._transition_to(KioskState.STAGE_1_IDLE)
         
         else:
-            # User still active, reset countdown
+            # User still active and close, reset countdown
             if self.is_counting_down:
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info("Stage 4: User active again, resetting countdown")
                 self.is_counting_down = False
                 self.countdown_start_time = None
-    
-    def _handle_stage_5(self):
-        """
-        Stage 5: Thank you video (plays once, no loop)
-        Transition handled by main.py when video finishes
-        """
-        pass
     
     def _transition_to(self, new_state):
         """Transition to new state and reset timers"""
@@ -225,11 +245,19 @@ class StateMachine:
         self.countdown_start_time = None
         self.very_near_start_time = None
         self.was_very_near = False
+        self.button_clicked = False
     
     def signal_web_completion(self):
         """Called when web interface signals completion (button clicked)"""
-        logger.info("Web completion signal received")
+        if self.config.DEVELOPMENT_MODE:
+            logger.info("Web completion signal received")
         self.web_completion_requested = True
+    
+    def signal_button_click(self):
+        """Called when 'More Information' button is clicked"""
+        if self.config.DEVELOPMENT_MODE:
+            logger.info("'More Information' button clicked")
+        self.button_clicked = True
     
     def get_countdown_remaining(self):
         """Get remaining seconds in current countdown"""
@@ -268,3 +296,4 @@ class StateMachine:
         self.very_near_start_time = None
         self.was_very_near = False
         self.web_completion_requested = False
+        self.button_clicked = False
