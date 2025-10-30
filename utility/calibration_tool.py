@@ -24,13 +24,13 @@ print("="*70)
 print()
 print("This tool helps you calibrate distance thresholds for your camera setup.")
 print()
-print("📋 INSTRUCTIONS:")
+print("INSTRUCTIONS:")
 print("   1. Stand at approximately 5+ meters from camera → Press 'f' (FAR)")
 print("   2. Stand at approximately 3 meters from camera  → Press 'n' (NEAR)")
 print("   3. Stand at approximately 0.6 meters or closer  → Press 'v' (VERY NEAR)")
 print("   4. Repeat steps 1-3 for better accuracy (3-5 measurements each)")
 print()
-print("⌨️  CONTROLS:")
+print("CONTROLS:")
 print("   - Press 'f' : Save as FAR measurement")
 print("   - Press 'n' : Save as NEAR measurement")
 print("   - Press 'v' : Save as VERY NEAR measurement")
@@ -114,14 +114,14 @@ def main():
         
         cv2.namedWindow("Calibration Tool", cv2.WINDOW_NORMAL)
         
-        print("\n✅ Calibration started. Position yourself at different distances...\n")
+        print("\nCalibration started. Position yourself at different distances...\n")
         
         last_bbox_height = 0
         
         while True:
             ret, frame = camera.read()
             if not ret:
-                print("⚠️  Failed to read frame")
+                print("Failed to read frame")
                 break
             
             # Detect person
@@ -217,40 +217,40 @@ def main():
             key = cv2.waitKey(1) & 0xFF
             
             if key == ord('q'):
-                print("\n⚠️  Exiting without saving...")
+                print("\nExiting without saving...")
                 break
             
             elif key == ord('f') and bbox:
                 # Save as FAR
                 measurements['far'].append(last_bbox_height)
-                print(f"📏 FAR measurement saved: {last_bbox_height}px "
+                print(f"FAR measurement saved: {last_bbox_height}px "
                       f"(Total: {len(measurements['far'])})")
             
             elif key == ord('n') and bbox:
                 # Save as NEAR
                 measurements['near'].append(last_bbox_height)
-                print(f"📏 NEAR measurement saved: {last_bbox_height}px "
+                print(f"NEAR measurement saved: {last_bbox_height}px "
                       f"(Total: {len(measurements['near'])})")
             
             elif key == ord('v') and bbox:
                 # Save as VERY NEAR
                 measurements['very_near'].append(last_bbox_height)
-                print(f"📏 VERY NEAR measurement saved: {last_bbox_height}px "
+                print(f"VERY NEAR measurement saved: {last_bbox_height}px "
                       f"(Total: {len(measurements['very_near'])})")
             
             elif key == ord('s'):
                 # Save configuration
                 if any(len(v) > 0 for v in measurements.values()):
-                    print("\n💾 Saving calibration to config/kiosk_config.json...")
+                    print("\nSaving calibration to config/kiosk_config.json...")
                     new_config = save_calibration_config(measurements, current_config)
-                    print("✅ Configuration saved successfully!")
-                    print(f"\n📊 New thresholds:")
+                    print("Configuration saved successfully!")
+                    print(f"\nNew thresholds:")
                     print(f"   distance_far: {new_config['distance_far']}")
                     print(f"   distance_near: {new_config['distance_near']}")
                     print(f"   distance_very_near: {new_config['distance_very_near']}")
                     break
                 else:
-                    print("\n⚠️  No measurements collected! Take some measurements first.")
+                    print("\nNo measurements collected! Take some measurements first.")
         
         # Cleanup
         camera.release()
@@ -262,7 +262,7 @@ def main():
         print("="*70)
         
         if any(len(v) > 0 for v in measurements.values()):
-            print("\n📊 Measurements collected:")
+            print("\nMeasurements collected:")
             
             for dist_type, values in measurements.items():
                 if values:
@@ -276,20 +276,20 @@ def main():
                     print(f"    Range: {min_val}-{max_val}px")
             
             print("\n" + "="*70)
-            print("✅ Calibration complete!")
-            print(f"📁 Config saved to: {CONFIG_PATH}")
-            print("\n💡 TIP: Run this calibration in your actual deployment environment")
+            print("Calibration complete!")
+            print(f"Config saved to: {CONFIG_PATH}")
+            print("\nTIP: Run this calibration in your actual deployment environment")
             print("   for best results. Lighting and camera angle affect measurements.")
         
         else:
-            print("\n⚠️  No measurements collected!")
+            print("\nNo measurements collected!")
             print("Run the tool again and use 'f', 'n', 'v' keys to save measurements.")
         
         print("\n" + "="*70)
         input("\nPress Enter to exit...")
     
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nError: {e}")
         import traceback
         traceback.print_exc()
         input("\nPress Enter to exit...")

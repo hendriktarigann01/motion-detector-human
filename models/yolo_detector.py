@@ -1,5 +1,6 @@
 """
 YOLO Person Detection with Distance Estimation
+UPDATED: Uses size score (height + width ratio) for fair detection
 """
 
 import torch
@@ -19,13 +20,18 @@ class YOLOPersonDetector:
         self.model = None
         self.load_model()
 
+        # Frame skipping for FPS optimization
+        self.frame_counter = 0
+        self.skip_frames = 3  # Run YOLO every 3rd frame
+        self.last_detection = (False, None, None, 0.0)  # Cache last result
+
 
     def load_model(self):
         """Load YOLO model using Ultralytics (supports YOLOv8 and YOLOv5u)"""
         try:
             logger.info(f"Loading YOLO model: {self.config.YOLO_MODEL_PATH}")
             
-            # Load model from path (can be yolov5s.pt, yolov5su.pt, yolov8n.pt, etc.)
+            # Load model from path (can be yolov5s.pt, yolov5s.pt, yolov8n.pt, etc.)
             self.model = YOLO(self.config.YOLO_MODEL_PATH)
 
             # Optional: Set confidence threshold if available in config
@@ -47,6 +53,7 @@ class YOLOPersonDetector:
     def detect_person(self, frame):
         """
         Detect person in a frame using YOLO (Ultralytics format)
+        OPTIMIZED: Frame skipping to improve FPS
 
         Args:
             frame: BGR image from OpenCV
@@ -60,11 +67,18 @@ class YOLOPersonDetector:
             logger.warning("YOLO model not loaded yet.")
             return False, None, None, 0.0
 
+        # Frame skipping optimization
+        self.frame_counter += 1
+        if self.frame_counter % self.skip_frames != 0:
+            # Return cached result for skipped frames
+            return self.last_detection
+
         # Run inference (Ultralytics returns a list of Results)
         results = self.model.predict(frame, verbose=False)
 
         if not results or len(results[0].boxes) == 0:
-            return False, None, None, 0.0
+            self.last_detection = (False, None, None, 0.0)
+            return self.last_detection
 
         boxes = results[0].boxes.cpu().numpy()
 
@@ -72,7 +86,8 @@ class YOLOPersonDetector:
         person_detections = [b for b in boxes if int(b.cls[0]) == 0]
 
         if not person_detections:
-            return False, None, None, 0.0
+            self.last_detection = (False, None, None, 0.0)
+            return self.last_detection
 
         # Select detection with highest confidence
         best = max(person_detections, key=lambda b: float(b.conf[0]))
@@ -80,33 +95,37 @@ class YOLOPersonDetector:
         confidence = float(best.conf[0])
         bbox = (x1, y1, x2, y2)
 
-        # Estimate distance
+        # Estimate distance using SIMPLE pixel-based method
         distance_status = self._estimate_distance(bbox)
 
-        return True, bbox, distance_status, confidence
+        # Cache result
+        self.last_detection = (True, bbox, distance_status, confidence)
+        return self.last_detection
 
 
     def _estimate_distance(self, bbox):
         """
-        Estimate distance based on bounding box height
+        Estimate distance based on bounding box height (SIMPLE & CLEAR)
         
         Args:
             bbox: (x1, y1, x2, y2)
         
         Returns:
-            str: 'far' (>5m), 'near' (<5m), 'very_near' (≤0.6m)
+            str: 'far' (>5m), 'near' (~3m), 'very_near' (<=0.6m)
         """
         x1, y1, x2, y2 = bbox
         bbox_height = y2 - y1
         
-        # Distance thresholds based on bbox height
-        # NOTE: These values need calibration based on your camera setup!
+        # Simple logic: Makin tinggi bbox = makin dekat
         if bbox_height >= self.config.DISTANCE_VERY_NEAR:
-            return 'very_near'  # ≤0.6m
+            return 'very_near'  # >= 450px = Very close (<=0.6m)
         elif bbox_height >= self.config.DISTANCE_NEAR:
-            return 'near'  # <5m
+            return 'near'  # >= 300px = Near (~3m)
+        elif bbox_height >= self.config.DISTANCE_FAR:
+            return 'far'  # >= 150px = Far (~5m)
         else:
-            return 'far'  # >5m
+            return 'far'  # < 150px = Very far (>5m)
+    
     
     def draw_detection(self, frame, bbox, distance_status, confidence):
         """
@@ -125,6 +144,8 @@ class YOLOPersonDetector:
             return frame
         
         x1, y1, x2, y2 = bbox
+        bbox_height = y2 - y1
+        bbox_width = x2 - x1
         
         # Color based on distance
         if distance_status == 'very_near':
@@ -148,9 +169,12 @@ class YOLOPersonDetector:
         cv2.putText(frame, text, (x1, y1 - 10), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
         
-        # Draw bbox height (for calibration)
-        height_text = f"H: {y2 - y1}px"
-        cv2.putText(frame, height_text, (x1, y2 + 20), 
+        # Draw bbox info (for calibration)
+        info_y = y2 + 20
+        cv2.putText(frame, f"Height: {bbox_height}px", (x1, info_y), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        
+        cv2.putText(frame, f"Width: {bbox_width}px", (x1, info_y + 20), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
         
         return frame

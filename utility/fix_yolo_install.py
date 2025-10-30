@@ -17,11 +17,11 @@ def run_command(cmd):
     print(f"Running: {cmd}")
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     if result.returncode == 0:
-        print("✅ Success")
+        print(" Success")
         if result.stdout:
             print(result.stdout)
     else:
-        print("❌ Failed")
+        print(" Failed")
         if result.stderr:
             print(result.stderr)
     print()
@@ -64,11 +64,11 @@ print("="*60)
 
 try:
     import torch
-    print("✅ PyTorch installed")
+    print(" PyTorch installed")
     print(f"   Version: {torch.__version__}")
     print(f"   CUDA available: {torch.cuda.is_available()}")
 except ImportError:
-    print("❌ PyTorch not installed!")
+    print(" PyTorch not installed!")
     print("   Run: pip install torch torchvision")
 
 try:
@@ -81,11 +81,11 @@ try:
                           device='cpu',
                           trust_repo=True,
                           verbose=False)
-    print("✅ YOLOv5 model loaded successfully!")
+    print(" YOLOv5 model loaded successfully!")
     print(f"   Model type: {type(model)}")
     
 except Exception as e:
-    print("❌ YOLOv5 load failed!")
+    print(" YOLOv5 load failed!")
     print(f"   Error: {e}")
     print("\n📝 Manual fix steps:")
     print("   1. pip uninstall torch torchvision yolov5 ultralytics")

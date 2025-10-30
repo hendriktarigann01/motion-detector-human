@@ -14,14 +14,14 @@ print()
 # Test 1: PyTorch
 print("Test 1: Checking PyTorch...")
 try:
-    print(f"✅ PyTorch installed: {torch.__version__}")
+    print(f" PyTorch installed: {torch.__version__}")
     print(f"   CUDA available: {torch.cuda.is_available()}")
     if torch.cuda.is_available():
         print(f"   CUDA version: {torch.version.cuda}")
         print(f"   GPU device: {torch.cuda.get_device_name(0)}")
     print()
 except ImportError as e:
-    print(f"❌ PyTorch not installed!")
+    print(f" PyTorch not installed!")
     print(f"   Error: {e}")
     print(f"   Fix: pip install torch torchvision")
     sys.exit(1)
@@ -31,7 +31,7 @@ print("Test 2: Checking Ultralytics...")
 try:
     from ultralytics import YOLO
     import ultralytics
-    print(f"✅ Ultralytics installed: {ultralytics.__version__}")
+    print(f" Ultralytics installed: {ultralytics.__version__}")
     print()
     use_ultralytics = True
 except ImportError:
@@ -50,7 +50,7 @@ try:
     # Try loading smallest model (yolov5n)
     print("   Loading yolov5n (smallest, fastest)...")
     model = torch.hub.load('ultralytics/yolov5', 'yolov5n', pretrained=True)
-    print("   ✅ Model loaded successfully!")
+    print("    Model loaded successfully!")
     print()
     
     # Test 4: Model info
@@ -70,7 +70,7 @@ try:
     
     print("   Running inference...")
     results = model(test_img)
-    print("   ✅ Inference successful!")
+    print("    Inference successful!")
     print(f"   Detections: {len(results.xyxy[0])} objects detected")
     print()
     
@@ -84,7 +84,7 @@ try:
     
     # Summary
     print("="*60)
-    print("✅ ALL TESTS PASSED!")
+    print(" ALL TESTS PASSED!")
     print("="*60)
     print()
     print("Your YOLO installation is working correctly!")
@@ -101,7 +101,7 @@ try:
         print()
 
 except Exception as e:
-    print(f"❌ Error during model loading/testing!")
+    print(f" Error during model loading/testing!")
     print(f"   Error: {e}")
     print()
     print("Troubleshooting:")

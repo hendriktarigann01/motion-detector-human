@@ -40,7 +40,7 @@ for i in range(10):
             
             available_cameras.append(camera_info)
             
-            print(f"✅ Camera {i} found:")
+            print(f"   Camera {i} found:")
             print(f"   Resolution: {width}x{height}")
             print(f"   FPS: {fps:.1f}")
             print()
@@ -48,7 +48,7 @@ for i in range(10):
         cap.release()
 
 if not available_cameras:
-    print("❌ No cameras found!")
+    print(" No cameras found!")
     print()
     print("Troubleshooting:")
     print("1. Check if webcam is plugged in")

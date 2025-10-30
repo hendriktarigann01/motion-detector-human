@@ -1,6 +1,6 @@
 MJ Solution Kiosk - Installation Guide
 
-Quick Installation 
+Quick Installation
 
 Double-click → INSTALL.bat
 Tunggu proses selesai (5-10 menit)
@@ -8,13 +8,12 @@ Done! Shortcut sudah ada di Desktop
 
 Installer otomatis akan:
 
-✅ Check Python
-✅ Install semua packages
-✅ Buat Desktop shortcut + icon
-✅ Setup auto-start (optional)
-✅ Create default config
-✅ Test components
-
+Check Python
+Install semua packages
+Buat Desktop shortcut + icon
+Setup auto-start (optional)
+Create default config
+Test components
 
 📋 Prerequisites
 System Requirements
@@ -30,5 +29,3 @@ Python 3.8+ (Wajib!)
 
 Download: https://www.python.org/downloads/
 ⚠️ PENTING: Centang "Add Python to PATH" saat install!
-
-

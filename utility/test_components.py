@@ -26,22 +26,22 @@ def test_result(name, passed, message=""):
     global tests_passed, tests_failed
     
     if passed:
-        print(f"✅ {name}: PASSED")
+        print(f" {name}: PASSED")
         tests_passed += 1
     else:
-        print(f"❌ {name}: FAILED")
+        print(f" {name}: FAILED")
         if message:
             print(f"   → {message}")
         tests_failed += 1
     print()
 
 
-print("🔍 Running component tests...\n")
+print("Running component tests...\n")
 
 # ============================================================
 # TEST 1: Python Packages
 # ============================================================
-print("📦 Test 1: Checking Python packages...")
+print("Test 1: Checking Python packages...")
 
 try:
     import cv2
@@ -121,7 +121,7 @@ except Exception as e:
 # ============================================================
 # TEST 4: YOLO Model
 # ============================================================
-print("🎯 Test 4: Checking YOLO model...")
+print("Test 4: Checking YOLO model...")
 
 try:
     from models.yolo_detector import YOLOPersonDetector
@@ -141,7 +141,7 @@ except Exception as e:
 # ============================================================
 # TEST 5: Media Files
 # ============================================================
-print("🎬 Test 5: Checking media files...")
+print("Test 5: Checking media files...")
 
 # Check idle video
 idle_path = Path(config.VIDEO_IDLE_LOOP)
@@ -194,7 +194,7 @@ else:
 # ============================================================
 # TEST 6: State Machine
 # ============================================================
-print("🔄 Test 6: Checking state machine...")
+print("Test 6: Checking state machine...")
 
 try:
     from models.state_machine import StateMachine, KioskState
@@ -210,7 +210,7 @@ try:
     # Test transition
     sm.update(person_detected=True, distance_status='near')
     if sm.current_state == KioskState.STAGE_2_DETECTED:
-        print("   ✅ State transition working")
+        print("    State transition working")
     else:
         warnings.append("State transition may have issues")
     
@@ -234,12 +234,12 @@ try:
     
     # Test video loading
     if player.idle_video and player.idle_video.isOpened():
-        print("   ✅ Idle video loaded")
+        print("    Idle video loaded")
     else:
         warnings.append("Idle video not loaded properly")
     
     if player.waving_video and player.waving_video.isOpened():
-        print("   ✅ Waving video loaded")
+        print("    Waving video loaded")
     else:
         warnings.append("Waving video not loaded properly")
     
@@ -275,24 +275,24 @@ print("="*70)
 print(" TEST SUMMARY")
 print("="*70)
 print()
-print(f"✅ Passed: {tests_passed}")
-print(f"❌ Failed: {tests_failed}")
+print(f" Passed: {tests_passed}")
+print(f" Failed: {tests_failed}")
 print()
 
 if warnings:
-    print("⚠️  WARNINGS:")
+    print("WARNINGS:")
     for warning in warnings:
         print(f"   • {warning}")
     print()
 
 if tests_failed == 0:
-    print("🎉 ALL TESTS PASSED!")
-    print("✅ System ready to run")
+    print("ALL TESTS PASSED!")
+    print(" System ready to run")
     print()
 else:
-    print("❌ SOME TESTS FAILED!")
+    print(" SOME TESTS FAILED!")
     print()
-    print("📝 Action items:")
+    print("   Action items:")
     print("   1. Install missing packages: pip install -r requirements.txt")
     print("   2. Check camera connection")
     print("   3. Add media files to assets/ folder")

@@ -40,7 +40,7 @@ REM Check Python
 python --version >nul 2>&1
 if errorlevel 1 (
     echo.
-    echo ❌ ERROR: Python not found!
+    echo  ERROR: Python not found!
     echo.
     echo Please install Python 3.8+ from:
     echo https://www.python.org/downloads/

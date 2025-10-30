@@ -1,8 +1,4 @@
-"""
-State Machine for Kiosk System
-UPDATED: 4 stages - Stage 3 ONLY button trigger (NO AUTO-TRIGGER)
-Removed THANK_YOU stage, button click can skip to Stage 4
-"""
+
 
 from enum import Enum
 from datetime import datetime
@@ -32,6 +28,10 @@ class StateMachine:
         self.last_interaction_time = datetime.now()
         self.countdown_start_time = None
         
+        # NEW: Track when person is FAR in Stage 2
+        self.far_start_time = None
+        self.was_far = False
+        
         # Separate timer for very_near stability check (NOT USED for auto-trigger anymore)
         self.very_near_start_time = None
         self.was_very_near = False
@@ -40,7 +40,7 @@ class StateMachine:
         self.is_counting_down = False
         self.person_detected = False
         self.web_completion_requested = False
-        self.button_clicked = False  # Track button click
+        self.button_clicked = False
         
         logger.info("State Machine initialized at STAGE_1_IDLE")
     
@@ -100,6 +100,8 @@ class StateMachine:
             # Reset timers on state change
             self.very_near_start_time = None
             self.was_very_near = False
+            self.far_start_time = None
+            self.was_far = False
             self.button_clicked = False
             
             # Reset web completion flag on state change
@@ -109,19 +111,35 @@ class StateMachine:
         return state_changed, self.current_state
     
     def _handle_stage_1(self, person_detected, distance_status):
-        """Stage 1: Idle monitoring with looping welcome animation"""
-        if person_detected:
+        """
+        Stage 1: Idle monitoring with looping welcome animation
+        Only transition to Stage 2 when person is at NEAR distance (not FAR)
+        """
+        if self.config.DEVELOPMENT_MODE:
+            logger.info(f"Stage 1: person_detected={person_detected}, distance_status={distance_status}")
+
+        if person_detected and distance_status in ['near', 'very_near']:
+            # Person must be at NEAR or closer to trigger audio
+            if self.config.DEVELOPMENT_MODE:
+                logger.info(f"Stage 1: Person at {distance_status.upper()}, moving to Stage 2")
             self._transition_to(KioskState.STAGE_2_DETECTED)
     
     def _handle_stage_2(self, person_detected, distance_status):
-        """Stage 2: Person detected, show hand-waving video+audio (looping)"""
+        """
+        Stage 2: Person detected at NEAR distance, show hand-waving video+audio (looping)
+        
+        Transitions:
+        - Person moves to VERY_NEAR -> Stage 3 (audio continues but button appears)
+        - Person moves to FAR for 8+ seconds -> Back to Stage 1
+        - Person disappears for 10+ seconds -> Back to Stage 1
+        """
         if not person_detected:
-            # Person left, start countdown
+            # Person left completely, start countdown
             if not self.is_counting_down:
                 self.is_counting_down = True
                 self.countdown_start_time = datetime.now()
                 if self.config.DEVELOPMENT_MODE:
-                    logger.info(f"Stage 2: Starting {self.config.STAGE2_COUNTDOWN}s countdown")
+                    logger.info(f"Stage 2: Starting {self.config.STAGE2_COUNTDOWN}s countdown (person left)")
             
             # Check if countdown expired
             elapsed = (datetime.now() - self.countdown_start_time).total_seconds()
@@ -129,18 +147,54 @@ class StateMachine:
                 if self.config.DEVELOPMENT_MODE:
                     logger.info("Stage 2: Countdown expired, back to Stage 1")
                 self._transition_to(KioskState.STAGE_1_IDLE)
+            
+            # Reset FAR timer since person is gone
+            self.far_start_time = None
+            self.was_far = False
         
         elif distance_status == 'very_near':
-            # Person very close (<=0.6m), move to stage 3 (audio + button)
+            # Person very close (<=0.6m), move to stage 3 (button appears, audio continues)
             if self.config.DEVELOPMENT_MODE:
-                logger.info("Stage 2: Person very close, moving to Stage 3 (Audio + Button)")
+                logger.info("Stage 2: Person very close, moving to Stage 3 (Button appears)")
+                logger.info(f"Stage 2: Distance status = {distance_status}, transitioning to STAGE_3_AUDIO")
             self._transition_to(KioskState.STAGE_3_AUDIO)
         
+        elif distance_status == 'far':
+            # Person is FAR (moved away), track timeout
+            if not self.was_far:
+                # Just entered FAR zone
+                self.far_start_time = datetime.now()
+                self.was_far = True
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info("Stage 2: Person moved to FAR, starting timeout timer")
+            
+            # Check how long person has been FAR
+            time_at_far = (datetime.now() - self.far_start_time).total_seconds()
+            
+            if self.config.DEVELOPMENT_MODE and int(time_at_far) != int(time_at_far - 0.1):
+                logger.info(f"Stage 2: Person at FAR for {time_at_far:.1f}s / {self.config.STAGE2_FAR_TIMEOUT}s")
+            
+            if time_at_far >= self.config.STAGE2_FAR_TIMEOUT:
+                # Person stayed FAR for too long, not interested
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info(f"Stage 2: Person stayed FAR for {time_at_far:.1f}s, back to Stage 1")
+                self._transition_to(KioskState.STAGE_1_IDLE)
+        
         else:
-            # Person still there but not close enough, reset countdown
+            # Person is at NEAR distance (good! still interested)
+            # Reset countdown and FAR timer
             if self.is_counting_down:
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info("Stage 2: Person back at NEAR, resetting countdown")
                 self.is_counting_down = False
                 self.countdown_start_time = None
+            
+            if self.was_far:
+                # Person moved from FAR to NEAR, reset FAR timer
+                if self.config.DEVELOPMENT_MODE:
+                    logger.info("Stage 2: Person moved closer (FAR -> NEAR)")
+                self.far_start_time = None
+                self.was_far = False
     
     def _handle_stage_3(self, person_detected, distance_status):
         """
@@ -245,6 +299,8 @@ class StateMachine:
         self.countdown_start_time = None
         self.very_near_start_time = None
         self.was_very_near = False
+        self.far_start_time = None
+        self.was_far = False
         self.button_clicked = False
     
     def signal_web_completion(self):
@@ -281,6 +337,12 @@ class StateMachine:
             return 0
         return (datetime.now() - self.very_near_start_time).total_seconds()
     
+    def get_far_duration(self):
+        """Get how long person has been at FAR distance in Stage 2 (for display)"""
+        if self.far_start_time is None or not self.was_far:
+            return 0
+        return (datetime.now() - self.far_start_time).total_seconds()
+    
     def get_state_duration(self):
         """Get how long we've been in current state"""
         return (datetime.now() - self.state_entry_time).total_seconds()
@@ -295,5 +357,7 @@ class StateMachine:
         self.countdown_start_time = None
         self.very_near_start_time = None
         self.was_very_near = False
+        self.far_start_time = None
+        self.was_far = False
         self.web_completion_requested = False
         self.button_clicked = False

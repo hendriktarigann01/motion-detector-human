@@ -217,7 +217,7 @@ class KioskLauncher:
         status_frame = tk.Frame(main_frame, bg=LIGHT_BG, relief=tk.RIDGE, bd=2)
         status_frame.pack(fill=tk.X, pady=(0, 12))
         
-        status_title = tk.Label(status_frame, text="📊 SYSTEM STATUS", 
+        status_title = tk.Label(status_frame, text="SYSTEM STATUS", 
                                font=("Segoe UI", 10, "bold"),  # Smaller: 10
                                fg=ACCENT_CYAN, bg=LIGHT_BG)
         status_title.pack(pady=6)
@@ -249,14 +249,14 @@ class KioskLauncher:
         tk.Frame(main_frame, bg=DARK_BG, height=8).pack()
         
         # Action Buttons
-        action_label = tk.Label(main_frame, text="🚀 QUICK ACTIONS", 
+        action_label = tk.Label(main_frame, text="QUICK ACTIONS", 
                                font=("Segoe UI", 10, "bold"),  # Smaller: 10
                                fg=ACCENT_CYAN, bg=DARK_BG)
         action_label.pack(pady=(8, 12))
         
         # Start Button (Big & Prominent) - COMPACT
         start_btn = ModernButton(main_frame, 
-                                text="▶ START KIOSK",
+                                text="START KIOSK",
                                 command=self.start_kiosk,
                                 width=320, height=65,  # Smaller: 320x65 (was 400x100)
                                 bg_color=COMMUTER_RED,
@@ -268,7 +268,7 @@ class KioskLauncher:
         buttons_frame.pack(pady=12)
         
         calibrate_btn = ModernButton(buttons_frame,
-                                     text="⚙️ CALIBRATION",
+                                     text="CALIBRATION",
                                      command=self.run_calibration,
                                      width=200, height=50,  # Smaller: 200x50
                                      bg_color=METRO_BLUE,
@@ -276,7 +276,7 @@ class KioskLauncher:
         calibrate_btn.pack(side=tk.LEFT, padx=8)
         
         test_btn = ModernButton(buttons_frame,
-                               text="🧪 TEST",
+                               text="TEST",
                                command=self.run_test,
                                width=200, height=50,  # Smaller: 200x50
                                bg_color=METRO_BLUE,
@@ -287,7 +287,7 @@ class KioskLauncher:
         config_frame = tk.Frame(main_frame, bg=LIGHT_BG, relief=tk.RIDGE, bd=2)
         config_frame.pack(fill=tk.BOTH, expand=True, pady=(12, 0))
         
-        config_title = tk.Label(config_frame, text="⚙️ CONFIGURATION", 
+        config_title = tk.Label(config_frame, text="CONFIGURATION", 
                                font=("Segoe UI", 10, "bold"),  # Smaller: 10
                                fg=ACCENT_CYAN, bg=LIGHT_BG)
         config_title.pack(pady=6)

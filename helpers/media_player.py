@@ -43,7 +43,7 @@ class MediaPlayer:
             if welcome_path.exists():
                 self.welcome_video = cv2.VideoCapture(str(welcome_path))
                 if self.welcome_video.isOpened():
-                    logger.info(f"✅ Loaded welcome animation: {welcome_path}")
+                    logger.info(f"Loaded welcome animation: {welcome_path}")
                 else:
                     logger.error(f"❌ Failed to open welcome animation: {welcome_path}")
                     self.welcome_video = None
@@ -55,7 +55,7 @@ class MediaPlayer:
             if handwaving_path.exists():
                 self.handwaving_video = cv2.VideoCapture(str(handwaving_path))
                 if self.handwaving_video.isOpened():
-                    logger.info(f"✅ Loaded hand-waving video: {handwaving_path}")
+                    logger.info(f"Loaded hand-waving video: {handwaving_path}")
                 else:
                     logger.error(f"❌ Failed to open hand-waving video: {handwaving_path}")
                     self.handwaving_video = None
@@ -67,7 +67,7 @@ class MediaPlayer:
             if audio_path.exists():
                 try:
                     pygame.mixer.music.load(str(audio_path))
-                    logger.info(f"✅ Loaded hand-waving audio: {audio_path}")
+                    logger.info(f"Loaded hand-waving audio: {audio_path}")
                 except Exception as e:
                     logger.error(f"❌ Failed to load hand-waving audio: {e}")
             else:
@@ -79,7 +79,7 @@ class MediaPlayer:
     def play_welcome_animation(self):
         """Start playing welcome animation (looping) - Stage 1"""
         if self.current_video_name != 'welcome':
-            logger.info("▶️ Starting welcome animation")
+            logger.info("Starting welcome animation")
             self.current_video = self.welcome_video
             self.current_video_name = 'welcome'
             if self.current_video and self.current_video.isOpened():
@@ -91,14 +91,15 @@ class MediaPlayer:
     def play_handwaving_video_and_audio(self):
         """Start playing hand-waving video + audio (both looping) - Stage 2 & 3"""
         if self.current_video_name != 'handwaving':
-            logger.info("▶️ Starting hand-waving video + audio")
+            logger.info("Starting hand-waving video + audio")
             self.current_video = self.handwaving_video
             self.current_video_name = 'handwaving'
             if self.current_video and self.current_video.isOpened():
                 self.current_video.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                logger.info("Hand-waving video started successfully")
             else:
-                logger.error("Hand-waving video not available!")
-            
+                logger.error("❌ Hand-waving video not available!")
+
             # Start audio looping
             self.play_audio_loop()
     
@@ -108,7 +109,7 @@ class MediaPlayer:
             try:
                 pygame.mixer.music.play(-1)  # -1 = loop indefinitely
                 self.audio_playing = True
-                logger.info("🔊 Started audio playback (looping)")
+                logger.info("Started audio playback (looping)")
             except Exception as e:
                 logger.error(f"Error playing audio: {e}")
     
@@ -118,7 +119,7 @@ class MediaPlayer:
             try:
                 pygame.mixer.music.stop()
                 self.audio_playing = False
-                logger.info("🔇 Stopped audio playback")
+                logger.info("Stopped audio playback")
             except Exception as e:
                 logger.error(f"Error stopping audio: {e}")
     

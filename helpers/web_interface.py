@@ -79,12 +79,15 @@ class WebInterfaceHandler:
             # Wait for page to load
             time.sleep(1)
             
-            # AUTO FULLSCREEN: Press F11
+            # AUTO FULLSCREEN: Press F11 multiple times to ensure fullscreen
             try:
                 body = self.driver.find_element(By.TAG_NAME, 'body')
-                body.send_keys(Keys.F11)
+                # Send F11 multiple times to ensure fullscreen
+                for _ in range(3):
+                    body.send_keys(Keys.F11)
+                    time.sleep(0.1)
                 if self.config.DEVELOPMENT_MODE:
-                    logger.info("Auto fullscreen (F11) activated")
+                    logger.info("Auto fullscreen (F11 x3) activated")
             except Exception as e:
                 logger.warning(f"Failed to auto fullscreen: {e}")
             
