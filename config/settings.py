@@ -72,15 +72,15 @@ FADE_DURATION = 0.5          # Fade to black duration (seconds)
 FADE_COLOR = (0, 0, 0)       # Black
 
 # ==================== BUTTON SETTINGS ====================
-# "More Information" button (Stage 3 only, bottom-right)
-BUTTON_PADDING = 30          # Distance from screen edges
-BUTTON_WIDTH = 250           # Button width
-BUTTON_HEIGHT = 70           # Button height
+# "More Information" button (Stage 3 only)
+BUTTON_PADDING = 10          # Distance from screen edges
+BUTTON_WIDTH = 125           # Button width
+BUTTON_HEIGHT = 35           # Button height
 
-# Colors (BGR format) - DEBUG: Bright colors for visibility
-BUTTON_COLOR = (0, 0, 255)           # Bright red background
-BUTTON_HOVER_COLOR = (0, 255, 255)   # Yellow on hover
-BUTTON_TEXT_COLOR = (255, 255, 255)  # White text
+# Colors (BGR format) 
+BUTTON_COLOR = (37, 34, 113)           
+BUTTON_HOVER_COLOR = (15, 12, 87)   
+BUTTON_TEXT_COLOR = (255, 255, 255)  
 
 # Text styling
 BUTTON_FONT_SCALE = 0.8

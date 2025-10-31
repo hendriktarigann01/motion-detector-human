@@ -1,5 +1,5 @@
 """
-MJ Solution Kiosk - Main Application (OPTIMIZED)
+C-Merch Kiosk - Main Application (OPTIMIZED)
 FIXES:
 - FPS boost: Skip YOLO in Stage 1 & 4, optimize video decoding
 - Button always visible in Stage 3 (fixed z-index)
@@ -144,7 +144,7 @@ class KioskApplication:
     
     def __init__(self):
         logger.info("="*60)
-        logger.info("MJ Solution Kiosk - OPTIMIZED VERSION")
+        logger.info("C-Merch Kiosk - OPTIMIZED VERSION")
         logger.info(f"Resolution: {config.CAMERA_WIDTH}x{config.CAMERA_HEIGHT}")
         logger.info(f"Mode: {'DEVELOPMENT' if config.DEVELOPMENT_MODE else 'PRODUCTION'}")
         logger.info("="*60)

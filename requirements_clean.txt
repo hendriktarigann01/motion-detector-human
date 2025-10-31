@@ -1,0 +1,19 @@
+# Core dependencies for main_gui.py
+tkinter  # Built-in with Python
+Pillow>=11.1.0  # For image handling in GUI
+
+# Dependencies used in main_gui.py and related modules
+opencv-python>=4.11.0
+numpy>=2.2.0
+pygame>=2.5.0
+torch>=2.0.0
+torchvision>=0.15.0
+ultralytics>=8.0.0
+
+# Optional: For web interface (if used)
+selenium>=4.0.0
+
+# Development tools (remove for production)
+# pytest>=7.4.0
+# black>=23.0.0
+# flake8>=6.0.0

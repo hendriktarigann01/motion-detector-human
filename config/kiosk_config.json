@@ -1,8 +1,8 @@
 {
     "camera_index": 1,
-    "distance_far": 150,
-    "distance_near": 450,
-    "distance_very_near": 700,
+    "distance_far": 380,
+    "distance_near": 440,
+    "distance_very_near": 480,
     "stage2_countdown": 10,
     "stage3_timeout": 15,
     "stage4_idle_timeout": 15,
