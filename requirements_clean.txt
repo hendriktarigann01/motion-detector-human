@@ -1,5 +1,4 @@
 # Core dependencies for main_gui.py
-tkinter  # Built-in with Python
 Pillow>=11.1.0  # For image handling in GUI
 
 # Dependencies used in main_gui.py and related modules

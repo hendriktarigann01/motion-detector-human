@@ -46,7 +46,7 @@ STAGE3_RESPONSE_TIMEOUT = 15 # Return to Stage 1 if no button click
 
 # Stage 4: Web interface active
 STAGE4_IDLE_TIMEOUT = 15     # Start countdown if idle
-STAGE4_COUNTDOWN_DURATION = 60  # Return to Stage 1 after countdown
+STAGE4_COUNTDOWN_DURATION = 5 # Return to Stage 1 after countdown
 
 # ==================== MEDIA FILES ====================
 # Stage 1: Welcome animation (looping)

@@ -1,6 +1,6 @@
 """
 Web Interface Handler for Kiosk
-UPDATED: Auto fullscreen (F11) when browser opens
+UPDATED: Auto fullscreen using --kiosk mode
 Handles browser automation, interaction tracking, and completion signals
 """
 
@@ -44,7 +44,7 @@ class WebInterfaceHandler:
         
         # Setup Chrome options
         self.chrome_options = Options()
-        self.chrome_options.add_argument('--start-maximized')
+        self.chrome_options.add_argument('--kiosk')  # Fullscreen kiosk mode
         self.chrome_options.add_argument('--disable-infobars')
         self.chrome_options.add_argument('--disable-notifications')
         self.chrome_options.add_argument('--disable-popup-blocking')
@@ -55,53 +55,41 @@ class WebInterfaceHandler:
         logger.info("Web Interface Handler initialized")
     
     def open_browser(self):
-        """Open browser and navigate to web interface with auto fullscreen"""
+        """Open browser and navigate to web interface in fullscreen kiosk mode"""
         if not SELENIUM_AVAILABLE:
             logger.error("Cannot open browser - Selenium not available")
             return False
-        
+
         try:
             if self.is_browser_open and self.driver:
                 logger.warning("Browser already open")
                 return True
-            
+
             if self.config.DEVELOPMENT_MODE:
-                logger.info("Opening web browser...")
-            
-            # Initialize Chrome driver
+                logger.info("Opening web browser in kiosk mode...")
+
+            # Initialize Chrome driver with kiosk mode (auto fullscreen)
             self.driver = webdriver.Chrome(options=self.chrome_options)
-            
+
             # Navigate to URL
             self.driver.get(self.config.WEB_URL)
             if self.config.DEVELOPMENT_MODE:
                 logger.info(f"Navigated to: {self.config.WEB_URL}")
-            
+
             # Wait for page to load
             time.sleep(1)
-            
-            # AUTO FULLSCREEN: Press F11 multiple times to ensure fullscreen
-            try:
-                body = self.driver.find_element(By.TAG_NAME, 'body')
-                # Send F11 multiple times to ensure fullscreen
-                for _ in range(3):
-                    body.send_keys(Keys.F11)
-                    time.sleep(0.1)
-                if self.config.DEVELOPMENT_MODE:
-                    logger.info("Auto fullscreen (F11 x3) activated")
-            except Exception as e:
-                logger.warning(f"Failed to auto fullscreen: {e}")
-            
+
             self.is_browser_open = True
             self.last_interaction_time = datetime.now()
             self.completion_signaled = False
-            
+
             # Start monitoring thread
             self._start_monitoring()
-            
+
             if self.config.DEVELOPMENT_MODE:
-                logger.info("Web browser opened successfully (fullscreen)")
+                logger.info("Web browser opened successfully in kiosk fullscreen mode")
             return True
-        
+
         except Exception as e:
             logger.error(f"Failed to open browser: {e}")
             self.driver = None
