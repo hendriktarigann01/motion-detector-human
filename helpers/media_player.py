@@ -7,13 +7,13 @@ import cv2
 import pygame
 import numpy as np
 import logging
+import time
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
 class MediaPlayer:
-    """Handles video and audio playback for kiosk"""
     
     def __init__(self, config):
         self.config = config
@@ -32,7 +32,13 @@ class MediaPlayer:
             logger.error(f"Failed to init pygame mixer: {e}")
         
         self.audio_playing = False
-        
+
+        # Timing for hand-waving pattern based on video/audio duration (7 seconds each)
+        self.handwaving_start_time = None
+        self.video_frame_count = 0
+        self.audio_frame_count = 0
+        self.media_duration_frames = 7 * 30  # Assuming 30 FPS, 7 seconds = 210 frames
+
         self._load_media()
     
     def _load_media(self):
@@ -87,6 +93,8 @@ class MediaPlayer:
             else:
                 logger.error("Welcome animation not available!")
             self.stop_audio()
+            self.video_frame_count = 0
+            self.audio_frame_count = 0
     
     def play_handwaving_video_and_audio(self):
         """Start playing hand-waving video + audio (both looping) - Stage 2 & 3"""
@@ -100,7 +108,9 @@ class MediaPlayer:
             else:
                 logger.error("❌ Hand-waving video not available!")
 
-            # Start audio looping
+            # Reset counters and start audio
+            self.video_frame_count = 0
+            self.audio_frame_count = 0
             self.play_audio_loop()
     
     def play_audio_loop(self):
@@ -157,12 +167,25 @@ class MediaPlayer:
         # Resize if needed (FAST resize method)
         if target_size:
             frame = cv2.resize(frame, target_size, interpolation=cv2.INTER_LINEAR)
-        
+
+        # Control audio based on video frame count for hand-waving pattern
+        if self.current_video_name == 'handwaving':
+            self.video_frame_count += 1
+
+            # Pattern: Barengan (video & audio), Video saja, Barengan, Video saja, repeat
+            # Each phase lasts for the duration of the media (7 seconds, ~210 frames at 30 FPS)
+            cycle_frame = self.video_frame_count % (2 * self.media_duration_frames)
+            should_play_audio = cycle_frame < self.media_duration_frames
+
+            if should_play_audio and not self.audio_playing:
+                self.play_audio_loop()
+            elif not should_play_audio and self.audio_playing:
+                self.stop_audio()
+
         return frame
     
     def stop_all(self):
         """Stop all media playback"""
-        self.stop_audio()
     
     def cleanup(self):
         """Release all resources"""

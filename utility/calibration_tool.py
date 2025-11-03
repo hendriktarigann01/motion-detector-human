@@ -19,7 +19,7 @@ BASE_DIR = Path(__file__).parent.parent
 CONFIG_PATH = BASE_DIR / "config" / "kiosk_config.json"
 
 print("="*70)
-print("                   DISTANCE CALIBRATION TOOL")
+print("DISTANCE CALIBRATION TOOL")
 print("="*70)
 print()
 print("This tool helps you calibrate distance thresholds for your camera setup.")

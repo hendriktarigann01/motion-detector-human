@@ -14,15 +14,17 @@ if DEVELOPMENT_MODE:
     CAMERA_WIDTH = 540
     CAMERA_HEIGHT = 960
 else:
-    CAMERA_WIDTH = 1080
-    CAMERA_HEIGHT = 1920
+    CAMERA_WIDTH = 540
+    CAMERA_HEIGHT = 960
+    # CAMERA_WIDTH = 1080
+    # CAMERA_HEIGHT = 1920
 
 FPS_SMOOTHING_INTERVAL = 2
 
 # ==================== YOLO PERSON DETECTION ====================
 YOLO_MODEL_PATH = "yolov5n.pt"  # Auto-download if not exists
 YOLO_CONFIDENCE = 0.5
-YOLO_DEVICE = "cuda"  # Use "cuda" if GPU available
+YOLO_DEVICE = "cuda"  # Use "cuda" if GPU available else "cpu"
 
 # ==================== DISTANCE THRESHOLDS ====================
 
@@ -73,18 +75,18 @@ FADE_COLOR = (0, 0, 0)       # Black
 
 # ==================== BUTTON SETTINGS ====================
 # "More Information" button (Stage 3 only)
-BUTTON_PADDING = 10          # Distance from screen edges
-BUTTON_WIDTH = 125           # Button width
-BUTTON_HEIGHT = 35           # Button height
+BUTTON_PADDING = 8           # Distance from screen edges
+BUTTON_WIDTH = 200           # Button width
+BUTTON_HEIGHT = 40           # Button height
 
 # Colors (BGR format) 
-BUTTON_COLOR = (37, 34, 113)           
-BUTTON_HOVER_COLOR = (15, 12, 87)   
+BUTTON_COLOR = (113, 34, 37)         
+BUTTON_HOVER_COLOR = (87, 12, 15)     
 BUTTON_TEXT_COLOR = (255, 255, 255)  
 
 # Text styling
-BUTTON_FONT_SCALE = 0.8
-BUTTON_FONT_THICKNESS = 2
+BUTTON_FONT_SCALE = 0.6
+BUTTON_FONT_THICKNESS = 1
 
 # ==================== DEBUG & DISPLAY ====================
 DEBUG_MODE = True            # Show bounding boxes, timers, etc.

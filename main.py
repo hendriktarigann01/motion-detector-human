@@ -182,8 +182,13 @@ class KioskApplication:
     
     def _create_button(self):
         # TEMP: Move button to center of screen for testing visibility
-        btn_x = (config.CAMERA_WIDTH - config.BUTTON_WIDTH) // 3
-        btn_y = (config.CAMERA_HEIGHT - config.BUTTON_HEIGHT) // 3
+        btn_x = 430
+        btn_y = 430
+
+        # Log the values
+        logger.info(f"Screen resolution: {config.CAMERA_WIDTH}x{config.CAMERA_HEIGHT}")
+        logger.info(f"btn_x: {btn_x}")
+        logger.info(f"btn_y: {btn_y}")
 
         self.more_info_button = ClickableButton(
             btn_x, btn_y, config.BUTTON_WIDTH, config.BUTTON_HEIGHT,
@@ -315,12 +320,12 @@ class KioskApplication:
             video_frame = self.media_player.get_video_frame((w, h), loop=True)
             display = video_frame if video_frame is not None else camera_frame.copy()
 
-            # STAGE 3: Draw button (ONLY WHEN VERY NEAR)
-            if current_state == KioskState.STAGE_3_AUDIO and self.more_info_button and distance_status == "VERY_NEAR":
+            # STAGE 3: Draw button (always visible in Stage 3)
+            if current_state == KioskState.STAGE_3_AUDIO and self.more_info_button:
                 self.more_info_button.draw(display)
                 # DEBUG: Add button status overlay
                 if config.DEVELOPMENT_MODE:
-                    cv2.putText(display, "BUTTON DRAWN: YES (VERY NEAR)", (10, 150),
+                    cv2.putText(display, "BUTTON DRAWN: YES (STAGE 3)", (10, 150),
                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
             # Debug info (DEVELOPMENT_MODE only)

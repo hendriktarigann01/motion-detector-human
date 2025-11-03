@@ -10,7 +10,7 @@ import cv2
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 print("="*70)
-print(" C-Merch KIOSK - COMPONENT TEST")
+print("C-Merch KIOSK - COMPONENT TEST")
 print("="*70)
 print()
 
@@ -25,7 +25,7 @@ def test_result(name, passed, message=""):
     global tests_passed, tests_failed
     
     if passed:
-        print(f"✓ {name}: PASSED")
+        print(f" {name}: PASSED")
         tests_passed += 1
     else:
         print(f"✗ {name}: FAILED")
@@ -40,7 +40,7 @@ print("Running component tests...\n")
 # ============================================================
 # TEST 1: Python Packages
 # ============================================================
-print("📦 Test 1: Checking Python packages...")
+print("Test 1: Checking Python packages...")
 
 try:
     import cv2
@@ -83,25 +83,25 @@ except ImportError:
 # ============================================================
 # TEST 2: Settings File
 # ============================================================
-print("⚙️  Test 2: Checking settings...")
+print("Test 2: Checking settings...")
 
 try:
     from config import settings
     test_result("Settings file", True)
     
     # Check critical settings
-    print(f"   Development Mode: {settings.DEVELOPMENT_MODE}")
-    print(f"   Camera Index: {settings.CAMERA_INDEX}")
-    print(f"   Resolution: {settings.CAMERA_WIDTH}x{settings.CAMERA_HEIGHT}")
-    print(f"   YOLO Model: {settings.YOLO_MODEL_PATH}")
-    print(f"   YOLO Device: {settings.YOLO_DEVICE}")
+    print(f"Development Mode: {settings.DEVELOPMENT_MODE}")
+    print(f"Camera Index: {settings.CAMERA_INDEX}")
+    print(f"Resolution: {settings.CAMERA_WIDTH}x{settings.CAMERA_HEIGHT}")
+    print(f"YOLO Model: {settings.YOLO_MODEL_PATH}")
+    print(f"YOLO Device: {settings.YOLO_DEVICE}")
     print()
     
     # Check distance thresholds
-    print(f"   Distance Thresholds:")
-    print(f"     - FAR: {settings.DISTANCE_FAR}px")
-    print(f"     - NEAR: {settings.DISTANCE_NEAR}px")
-    print(f"     - VERY NEAR: {settings.DISTANCE_VERY_NEAR}px")
+    print(f"Distance Thresholds:")
+    print(f"FAR: {settings.DISTANCE_FAR}px")
+    print(f"NEAR: {settings.DISTANCE_NEAR}px")
+    print(f"VERY NEAR: {settings.DISTANCE_VERY_NEAR}px")
     print()
     
 except ImportError as e:
@@ -111,7 +111,7 @@ except ImportError as e:
 # ============================================================
 # TEST 3: Camera Helper
 # ============================================================
-print("📹 Test 3: Checking camera...")
+print("Test 3: Checking camera...")
 
 try:
     from helpers.camera_helper import initialize_camera
@@ -126,8 +126,8 @@ try:
     ret, frame = camera.read()
     if ret and frame is not None:
         test_result("Camera capture", True)
-        print(f"   Resolution: {frame.shape[1]}x{frame.shape[0]}")
-        print(f"   Channels: {frame.shape[2]}")
+        print(f"Resolution: {frame.shape[1]}x{frame.shape[0]}")
+        print(f"Channels: {frame.shape[2]}")
     else:
         test_result("Camera capture", False, "Cannot read frame")
     
@@ -141,19 +141,19 @@ except Exception as e:
 # ============================================================
 # TEST 4: YOLO Detector
 # ============================================================
-print("🤖 Test 4: Checking YOLO detector...")
+print("Test 4: Checking YOLO detector...")
 
 try:
     from models.yolo_detector import YOLOPersonDetector
     from config import settings
     
-    print("   Loading YOLO model (this may take a while)...")
+    print("Loading YOLO model (this may take a while)...")
     detector = YOLOPersonDetector(settings)
     
     test_result("YOLO detector", True)
-    print(f"   Model: {settings.YOLO_MODEL_PATH}")
-    print(f"   Device: {settings.YOLO_DEVICE}")
-    print(f"   Confidence: {settings.YOLO_CONFIDENCE}")
+    print(f"Model: {settings.YOLO_MODEL_PATH}")
+    print(f"Device: {settings.YOLO_DEVICE}")
+    print(f"Confidence: {settings.YOLO_CONFIDENCE}")
     print()
     
 except Exception as e:
@@ -163,7 +163,7 @@ except Exception as e:
 # ============================================================
 # TEST 5: State Machine
 # ============================================================
-print("🔄 Test 5: Checking state machine...")
+print("Test 5: Checking state machine...")
 
 try:
     from models.state_machine import StateMachine, KioskState
@@ -174,28 +174,28 @@ try:
     # Test initial state
     if sm.current_state == KioskState.STAGE_1_IDLE:
         test_result("State Machine init", True)
-        print(f"   Initial state: {sm.current_state.value}")
+        print(f"Initial state: {sm.current_state.value}")
     else:
         test_result("State Machine init", False, "Wrong initial state")
     
     # Test transition to Stage 2
     sm.update(person_detected=True, distance_status='near')
     if sm.current_state == KioskState.STAGE_2_DETECTED:
-        print("   ✓ Transition to STAGE_2_DETECTED working")
+        print("Transition to STAGE_2_DETECTED working")
     else:
         warnings.append("State transition to Stage 2 may have issues")
     
     # Test transition to Stage 3
     sm.update(person_detected=True, distance_status='very_near')
     if sm.current_state == KioskState.STAGE_3_AUDIO:
-        print("   ✓ Transition to STAGE_3_AUDIO working")
+        print("Transition to STAGE_3_AUDIO working")
     else:
         warnings.append("State transition to Stage 3 may have issues")
     
     # Test button click to Stage 4
     sm.update(person_detected=True, distance_status='very_near', button_clicked=True)
     if sm.current_state == KioskState.STAGE_4_WEB:
-        print("   ✓ Transition to STAGE_4_WEB working")
+        print("Transition to STAGE_4_WEB working")
     else:
         warnings.append("State transition to Stage 4 may have issues")
     
@@ -208,7 +208,7 @@ except Exception as e:
 # ============================================================
 # TEST 6: Media Files
 # ============================================================
-print("🎬 Test 6: Checking media files...")
+print("Test 6: Checking media files...")
 
 from config import settings
 
@@ -221,8 +221,8 @@ if welcome_path.exists():
         frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         duration = frames / fps if fps > 0 else 0
         test_result("Welcome animation", True)
-        print(f"   File: {welcome_path.name}")
-        print(f"   Duration: {duration:.1f}s, FPS: {fps:.1f}")
+        print(f"File: {welcome_path.name}")
+        print(f"Duration: {duration:.1f}s, FPS: {fps:.1f}")
         cap.release()
     else:
         test_result("Welcome animation", False, "Cannot open file")
@@ -239,8 +239,8 @@ if handwaving_path.exists():
         frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         duration = frames / fps if fps > 0 else 0
         test_result("Hand-waving video", True)
-        print(f"   File: {handwaving_path.name}")
-        print(f"   Duration: {duration:.1f}s, FPS: {fps:.1f}")
+        print(f"File: {handwaving_path.name}")
+        print(f"Duration: {duration:.1f}s, FPS: {fps:.1f}")
         cap.release()
     else:
         test_result("Hand-waving video", False, "Cannot open file")
@@ -252,8 +252,8 @@ else:
 audio_path = Path(settings.AUDIO_HAND_WAVING)
 if audio_path.exists():
     test_result("Hand-waving audio", True)
-    print(f"   File: {audio_path.name}")
-    print(f"   Size: {audio_path.stat().st_size / 1024:.1f} KB")
+    print(f"File: {audio_path.name}")
+    print(f"Size: {audio_path.stat().st_size / 1024:.1f} KB")
     print()
 else:
     test_result("Hand-waving audio", False, f"File not found: {audio_path}")
@@ -263,7 +263,7 @@ else:
 # ============================================================
 # TEST 7: Media Player
 # ============================================================
-print("🎵 Test 7: Checking media player...")
+print("Test 7: Checking media player...")
 
 try:
     from helpers.media_player import MediaPlayer
@@ -275,19 +275,19 @@ try:
     
     # Test video loading
     if player.welcome_video and player.welcome_video.isOpened():
-        print("   ✓ Welcome animation loaded")
+        print("Welcome animation loaded")
     else:
         warnings.append("Welcome animation not loaded properly")
     
     if player.handwaving_video and player.handwaving_video.isOpened():
-        print("   ✓ Hand-waving video loaded")
+        print("Hand-waving video loaded")
     else:
         warnings.append("Hand-waving video not loaded properly")
     
     # Test pygame mixer
     try:
         pygame.mixer.get_init()
-        print("   ✓ Pygame mixer initialized")
+        print("Pygame mixer initialized")
     except:
         warnings.append("Pygame mixer not initialized properly")
     
@@ -301,7 +301,7 @@ except Exception as e:
 # ============================================================
 # TEST 8: Web Interface Handler
 # ============================================================
-print("🌐 Test 8: Checking web interface handler...")
+print("Test 8: Checking web interface handler...")
 
 try:
     from helpers.web_interface import WebInterfaceHandler
@@ -309,13 +309,13 @@ try:
     
     web = WebInterfaceHandler(settings)
     test_result("Web Interface Handler", True)
-    print(f"   URL: {settings.WEB_URL}")
-    print(f"   Development Mode: {settings.DEVELOPMENT_MODE}")
+    print(f"URL: {settings.WEB_URL}")
+    print(f"Development Mode: {settings.DEVELOPMENT_MODE}")
     
     # Check if Selenium is available
     from helpers.web_interface import SELENIUM_AVAILABLE
     if SELENIUM_AVAILABLE:
-        print("   ✓ Selenium available")
+        print("Selenium available")
     else:
         warnings.append("Selenium not available - web interface will use fallback")
     
@@ -328,7 +328,7 @@ except Exception as e:
 # ============================================================
 # TEST 9: Integration Test (Optional)
 # ============================================================
-print("🔗 Test 9: Quick integration test...")
+print("Test 9: Quick integration test...")
 
 try:
     from helpers.camera_helper import initialize_camera
@@ -351,11 +351,11 @@ try:
         video_frame = media_player.get_video_frame()
         
         test_result("Integration test", True)
-        print(f"   Person detected: {person_detected}")
+        print(f"Person detected: {person_detected}")
         if person_detected:
-            print(f"   Distance: {distance_status}")
-            print(f"   Confidence: {confidence:.2f}")
-        print(f"   State: {state_machine.current_state.value}")
+            print(f"Distance: {distance_status}")
+            print(f"Confidence: {confidence:.2f}")
+        print(f"State: {state_machine.current_state.value}")
     else:
         test_result("Integration test", False, "Cannot read camera frame")
     
@@ -375,35 +375,35 @@ print("="*70)
 print(" TEST SUMMARY")
 print("="*70)
 print()
-print(f"✓ Passed: {tests_passed}")
+print(f" Passed: {tests_passed}")
 print(f"✗ Failed: {tests_failed}")
 print()
 
 if warnings:
-    print("⚠️  WARNINGS:")
+    print(" WARNINGS:")
     for warning in warnings:
         print(f"   • {warning}")
     print()
 
 if tests_failed == 0:
-    print("🎉 ALL TESTS PASSED!")
-    print("✓ System ready to run")
+    print("ALL TESTS PASSED!")
+    print(" System ready to run")
     print()
     print("Next steps:")
-    print("   1. Run: python main.py")
-    print("   2. Make sure web server is running at", settings.WEB_URL if 'settings' in dir() else "http://localhost:5173/")
+    print("1. Run: python main.py")
+    print("2. Make sure web server is running at", settings.WEB_URL if 'settings' in dir() else "http://localhost:5173/")
     print()
 else:
-    print("❌ SOME TESTS FAILED!")
+    print("SOME TESTS FAILED!")
     print()
     print("Action items:")
-    print("   1. Install missing packages: pip install -r requirements.txt")
-    print("   2. Check camera connection")
-    print("   3. Add media files to assets/ folder:")
-    print(f"      - {settings.WELCOME_ANIMATION if 'settings' in dir() else 'assets/welcome-animation.mp4'}")
-    print(f"      - {settings.VIDEO_HAND_WAVING if 'settings' in dir() else 'assets/hand-waving.mp4'}")
-    print(f"      - {settings.AUDIO_HAND_WAVING if 'settings' in dir() else 'assets/hand-waving.mp3'}")
-    print("   4. Fix configuration issues in settings.py")
+    print("1. Install missing packages: pip install -r requirements.txt")
+    print("2. Check camera connection")
+    print("3. Add media files to assets/ folder:")
+    print(f"{settings.WELCOME_ANIMATION if 'settings' in dir() else 'assets/welcome-animation.mp4'}")
+    print(f"{settings.VIDEO_HAND_WAVING if 'settings' in dir() else 'assets/hand-waving.mp4'}")
+    print(f"{settings.AUDIO_HAND_WAVING if 'settings' in dir() else 'assets/hand-waving.mp3'}")
+    print("4. Fix configuration issues in settings.py")
     print()
 
 print("="*70)

@@ -439,12 +439,6 @@ class ModernDashboard:
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # Edit button
-        edit_btn = ModernButton(config_frame,
-                               text="Edit Configuration",
-                               command=self.edit_config,
-                               color="#4b5563")
-        edit_btn.pack(fill=tk.X, pady=15, ipady=10)
     
     def build_footer(self, parent):
         """Build footer"""
