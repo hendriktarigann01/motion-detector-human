@@ -1,13 +1,13 @@
 {
-    "camera_index": 1,
+    "camera_index": 0,
     "distance_far": 150,
-    "distance_near": 450,
-    "distance_very_near": 700,
+    "distance_near": 300,
+    "distance_very_near": 450,
     "stage2_countdown": 10,
     "stage3_timeout": 15,
     "stage4_idle_timeout": 15,
-    "stage4_countdown": 60,
-    "web_url": "http://localhost:5173/test",
+    "stage4_countdown": 5,
+    "web_url": "http://localhost:5173/",
     "fullscreen": false,
     "debug_mode": true
 }

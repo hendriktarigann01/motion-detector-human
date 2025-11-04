@@ -86,7 +86,7 @@ except ImportError:
 print("Test 2: Checking settings...")
 
 try:
-    from config import settings
+    from config_loader import settings
     test_result("Settings file", True)
     
     # Check critical settings
@@ -115,7 +115,7 @@ print("Test 3: Checking camera...")
 
 try:
     from helpers.camera_helper import initialize_camera
-    from config import settings
+    from config_loader import settings
     
     camera = initialize_camera(
         settings.CAMERA_INDEX, 
@@ -145,7 +145,7 @@ print("Test 4: Checking YOLO detector...")
 
 try:
     from models.yolo_detector import YOLOPersonDetector
-    from config import settings
+    from config_loader import settings
     
     print("Loading YOLO model (this may take a while)...")
     detector = YOLOPersonDetector(settings)
@@ -167,7 +167,7 @@ print("Test 5: Checking state machine...")
 
 try:
     from models.state_machine import StateMachine, KioskState
-    from config import settings
+    from config_loader import settings
     
     sm = StateMachine(settings)
     
@@ -210,7 +210,7 @@ except Exception as e:
 # ============================================================
 print("Test 6: Checking media files...")
 
-from config import settings
+from config_loader import settings
 
 # Check welcome animation (Stage 1)
 welcome_path = Path(settings.WELCOME_ANIMATION)
@@ -268,7 +268,7 @@ print("Test 7: Checking media player...")
 try:
     from helpers.media_player import MediaPlayer
     import pygame
-    from config import settings
+    from config_loader import settings
     
     player = MediaPlayer(settings)
     test_result("Media Player init", True)
@@ -305,7 +305,7 @@ print("Test 8: Checking web interface handler...")
 
 try:
     from helpers.web_interface import WebInterfaceHandler
-    from config import settings
+    from config_loader import settings
     
     web = WebInterfaceHandler(settings)
     test_result("Web Interface Handler", True)
@@ -335,7 +335,7 @@ try:
     from models.yolo_detector import YOLOPersonDetector
     from models.state_machine import StateMachine
     from helpers.media_player import MediaPlayer
-    from config import settings
+    from config_loader import settings
     
     # Initialize components
     camera = initialize_camera(settings.CAMERA_INDEX, settings.CAMERA_WIDTH, settings.CAMERA_HEIGHT)

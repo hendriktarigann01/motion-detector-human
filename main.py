@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.append(str(Path(__file__).parent))
-from config import settings as config
+from config_loader import config as config
 from models.yolo_detector import YOLOPersonDetector
 from models.state_machine import StateMachine, KioskState
 from models.fps_calculator import FPSCounter

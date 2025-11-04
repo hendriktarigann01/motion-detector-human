@@ -51,10 +51,10 @@ class MediaPlayer:
                 if self.welcome_video.isOpened():
                     logger.info(f"Loaded welcome animation: {welcome_path}")
                 else:
-                    logger.error(f"❌ Failed to open welcome animation: {welcome_path}")
+                    logger.error(f"Failed to open welcome animation: {welcome_path}")
                     self.welcome_video = None
             else:
-                logger.error(f"❌ Welcome animation not found: {welcome_path}")
+                logger.error(f"Welcome animation not found: {welcome_path}")
             
             # Load hand waving video (Stage 2 & 3)
             handwaving_path = Path(self.config.VIDEO_HAND_WAVING)
@@ -63,10 +63,10 @@ class MediaPlayer:
                 if self.handwaving_video.isOpened():
                     logger.info(f"Loaded hand-waving video: {handwaving_path}")
                 else:
-                    logger.error(f"❌ Failed to open hand-waving video: {handwaving_path}")
+                    logger.error(f"Failed to open hand-waving video: {handwaving_path}")
                     self.handwaving_video = None
             else:
-                logger.error(f"❌ Hand-waving video not found: {handwaving_path}")
+                logger.error(f"Hand-waving video not found: {handwaving_path}")
             
             # Load hand waving audio (Stage 2 & 3)
             audio_path = Path(self.config.AUDIO_HAND_WAVING)
@@ -75,9 +75,9 @@ class MediaPlayer:
                     pygame.mixer.music.load(str(audio_path))
                     logger.info(f"Loaded hand-waving audio: {audio_path}")
                 except Exception as e:
-                    logger.error(f"❌ Failed to load hand-waving audio: {e}")
+                    logger.error(f"Failed to load hand-waving audio: {e}")
             else:
-                logger.error(f"❌ Hand-waving audio not found: {audio_path}")
+                logger.error(f"Hand-waving audio not found: {audio_path}")
         
         except Exception as e:
             logger.error(f"Error loading media: {e}")
@@ -106,7 +106,7 @@ class MediaPlayer:
                 self.current_video.set(cv2.CAP_PROP_POS_FRAMES, 0)
                 logger.info("Hand-waving video started successfully")
             else:
-                logger.error("❌ Hand-waving video not available!")
+                logger.error("Hand-waving video not available!")
 
             # Reset counters and start audio
             self.video_frame_count = 0
@@ -186,6 +186,7 @@ class MediaPlayer:
     
     def stop_all(self):
         """Stop all media playback"""
+        self.stop_audio()
     
     def cleanup(self):
         """Release all resources"""

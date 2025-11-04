@@ -1,5 +1,6 @@
 # Core dependencies for main_gui.py
 Pillow>=11.1.0  # For image handling in GUI
+cairosvg>=2.8.0  # For SVG icon support
 
 # Dependencies used in main_gui.py and related modules
 opencv-python>=4.11.0

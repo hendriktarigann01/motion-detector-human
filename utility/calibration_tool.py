@@ -1,6 +1,6 @@
 """
 Distance Calibration Tool - Enhanced Version
-Saves calibration data to config/kiosk_config.json
+Saves calibration data to config/data/settings.json
 """
 
 import cv2
@@ -10,13 +10,13 @@ import json
 from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import settings as config
+from config_loader import config
 from models.yolo_detector import YOLOPersonDetector
 from helpers.camera_helper import initialize_camera
 
 # Paths
 BASE_DIR = Path(__file__).parent.parent
-CONFIG_PATH = BASE_DIR / "config" / "kiosk_config.json"
+CONFIG_PATH = BASE_DIR / "config" / "data" / "settings.json"
 
 print("="*70)
 print("DISTANCE CALIBRATION TOOL")
@@ -241,7 +241,7 @@ def main():
             elif key == ord('s'):
                 # Save configuration
                 if any(len(v) > 0 for v in measurements.values()):
-                    print("\nSaving calibration to config/kiosk_config.json...")
+                    print("\nSaving calibration to config/data/settings.json...")
                     new_config = save_calibration_config(measurements, current_config)
                     print("Configuration saved successfully!")
                     print(f"\nNew thresholds:")
